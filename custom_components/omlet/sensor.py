@@ -1,63 +1,66 @@
+import aiohttp
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
-from .const import DOMAIN
+from homeassistant.const import PERCENTAGE
+from .const import DOMAIN, BASE_URL, CONF_API_KEY
 
 
-async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
-):
-    """Set up Omlet sensors from a config entry."""
-    omlet = hass.data[DOMAIN][entry.entry_id]  # Directly retrieve the Omlet object
-    devices = await hass.async_add_executor_job(omlet.get_devices)  # Fetch devices
+async def async_setup_entry(hass, entry, async_add_entities):
+    """Set up sensors for the Omlet Smart Coop integration."""
+    api_key = hass.data[DOMAIN][entry.entry_id][CONF_API_KEY]
+    headers = {"Authorization": f"Bearer {api_key}"}
 
-    entities = []
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(f"{BASE_URL}/device", headers=headers, timeout=10) as response:
+                if response.status == 200:
+                    devices = await response.json()
+                else:
+                    raise ValueError(f"Failed to fetch devices: {response.status}")
+    except Exception as e:
+        hass.logger.error(f"Error fetching devices for sensors: {e}")
+        return
 
-    for device in devices:
-        entities.append(OmletBatterySensor(device))
-        entities.append(OmletWiFiSensor(device))  # Ensure this class exists
-        entities.append(OmletDoorStateSensor(device))
-
-    async_add_entities(entities)
+    # Create battery sensors for all devices
+    sensors = [
+        OmletBatterySensor(device) for device in devices if "general" in device["state"]
+    ]
+    async_add_entities(sensors)
 
 
 class OmletBatterySensor(SensorEntity):
-    """Representation of the battery level sensor."""
+    """A sensor for monitoring battery levels of the Omlet Smart Coop."""
 
     def __init__(self, device):
         self._device = device
-        self._attr_name = f"{device.name} Battery"
-        self._attr_unique_id = f"{device.deviceId}_battery"
-        self._attr_device_class = "battery"
-        self._attr_native_unit_of_measurement = "%"
-        self._state = None
-
-    @property
-    def state(self):
-        """Return the current battery level."""
-        return self._device.state.general.batteryLevel
-
-    async def async_update(self):
-        """Fetch new state data for the sensor."""
-        await self._device.refresh()
-
-
-class OmletWiFiSensor(SensorEntity):
-    """Representation of the Wi-Fi strength sensor."""
-
-    def __init__(self, device):
-        self._device = device
-        self._attr_name = f"{device.name} Wi-Fi Strength"
-        self._attr_unique_id = f"{device.deviceId}_wifi_strength"
-        self._attr_device_class = "signal_strength"
-        self._attr_native_unit_of_measurement = "dBm"
-        self._state = None
-
-    @property
-    def state(self):
-        """Return the current Wi-Fi strength."""
-        return self._device.state.connectivity.wifiStrength
+        self._attr_name = f"{device['name']} Battery"
+        self._attr_unique_id = f"{device['deviceId']}_battery"
+        self._attr_unit_of_measurement = PERCENTAGE
+        self._attr_state = device["state"]["general"]["batteryLevel"]
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device["deviceId"])},
+            "name": device["name"],
+            "manufacturer": "Omlet",
+            "model": device["deviceType"],
+        }
 
     async def async_update(self):
-        """Fetch new state data for the sensor."""
-        await self._device.refresh()
+        """Fetch the latest data for the sensor."""
+        api_key = self.hass.data[DOMAIN][CONF_API_KEY]
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{BASE_URL}/device/{self._device['deviceId']}",
+                    headers=headers,
+                    timeout=10,
+                ) as response:
+                    if response.status == 200:
+                        device_data = await response.json()
+                        self._attr_state = device_data["state"]["general"]["batteryLevel"]
+                    else:
+                        self.hass.logger.error(
+                            f"Failed to update battery sensor: {response.status}"
+                        )
+        except Exception as e:
+            self.hass.logger.error(f"Error updating battery sensor: {e}")

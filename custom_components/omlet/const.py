@@ -87,5 +87,10 @@ TIMEZONE_EST = "-5"
 DEBUG_ENABLED = False  # Can be toggled for verbose logging
 
 # API-specific constants
+API_BASE_URL = "https://x107.omlet.co.uk/api/v1"
+API_ENDPOINT_DEVICES = "/device"
+API_ENDPOINT_DEVICE_ACTION = "/device/{deviceId}/action/{action}"
+API_ENDPOINT_DEVICE_CONFIG = "/device/{deviceId}/configuration"
+API_ENDPOINT_WHOAMI = "/whoami"
 API_RETRY_COUNT = 3  # Number of retries for API calls
 API_TIMEOUT = 10  # Timeout for API requests in seconds
