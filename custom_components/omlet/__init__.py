@@ -5,10 +5,10 @@ from typing import Any
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
-
-from .const import DOMAIN, PLATFORMS
 from smartcoop.client import SmartCoopClient
 from smartcoop.api.omlet import Omlet
+
+from .const import DOMAIN, PLATFORMS
 
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
@@ -22,16 +22,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Ensure the domain key exists in the shared data store
     hass.data.setdefault(DOMAIN, {})
 
-    # Get client secret from the config entry
-    client_secret = entry.data["client_secret"]
+    # Get API key from the config entry
+    api_key = entry.data["api_key"]
 
     try:
-        # Initialize the SmartCoopClient and Omlet API
-        client = SmartCoopClient(client_secret=client_secret)
+        # Initialize SmartCoopClient and Omlet API
+        client = SmartCoopClient(client_secret=api_key)
         omlet = Omlet(client)
-        hass.data[DOMAIN][entry.entry_id] = omlet  # Store the Omlet API instance
+
+        # Store the `omlet` object in `hass.data`
+        hass.data[DOMAIN][entry.entry_id] = omlet
+
     except Exception as e:
-        hass.logger.error(f"Error initializing SmartCoopClient: {e}")
+        hass.logger.error(f"Failed to initialize Omlet client: {e}")
         return False
 
     # Forward the setup to supported platforms (e.g., sensor, switch)
@@ -44,6 +47,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Unload platforms associated with the entry
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        # Remove the client from the shared data store
+        # Remove the `omlet` object from the shared data store
         hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok

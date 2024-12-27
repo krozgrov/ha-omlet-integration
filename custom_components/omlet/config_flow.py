@@ -15,55 +15,55 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            # Use the client_secret directly for setup
-            return await self.async_step_client_secret(user_input)
+            # Redirect to the appropriate step based on the user's choice
+            return await self.async_step_api_key(user_input)
 
-        # Ask the user for the client_secret
+        # Show the form to enter API key
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required("client_secret"): str,  # Request the client_secret
+                    vol.Required("api_key"): str,  # Request the API key
                 }
             ),
         )
 
-    async def async_step_client_secret(self, user_input: dict) -> FlowResult:
-        """Step for setting up using client_secret."""
+    async def async_step_api_key(self, user_input: dict) -> FlowResult:
+        """Step for setting up using API key."""
         errors = {}
 
         if user_input is not None:
-            client_secret = user_input.get("client_secret")
+            api_key = user_input.get("api_key")
 
-            # Validate the client_secret
+            # Validate the API key
             try:
-                client = SmartCoopClient(
-                    client_secret=client_secret
-                )  # Initialize the client
+                client = SmartCoopClient(client_secret=api_key)  # Initialize the client
                 omlet = Omlet(client)  # Access Omlet API to test the connection
                 devices = await self.hass.async_add_executor_job(
                     omlet.get_devices
-                )  # Example API call
+                )  # Fetch devices
                 if not devices:
-                    errors["base"] = "no_devices"
+                    errors["base"] = (
+                        "no_devices"  # Handle case where no devices are found
+                    )
             except Exception as e:
                 self.hass.logger.error(
                     f"Error authenticating with SmartCoopClient: {e}"
                 )
-                errors["base"] = "invalid_auth"
+                errors["base"] = "invalid_auth"  # Handle authentication errors
             else:
-                # Create a new config entry
+                # Create a new config entry and store the API key
                 return self.async_create_entry(
                     title="Omlet Smart Coop",
-                    data={"client_secret": client_secret},
+                    data={"api_key": api_key},  # Save the API key in the config entry
                 )
 
         # Show the form again with an error message
         return self.async_show_form(
-            step_id="client_secret",
+            step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required("client_secret"): str,
+                    vol.Required("api_key"): str,
                 }
             ),
             errors=errors,
