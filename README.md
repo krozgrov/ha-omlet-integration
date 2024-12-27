@@ -1,7 +1,7 @@
 
 # Omlet Home Assistant Integration
 
-A **custom integration for Home Assistant** that connects your Omlet Autodoor and related devices, enabling monitoring and control directly from Home Assistant.
+A **custom integration for Home Assistant** that connects your Omlet Smart Coop and related devices, enabling monitoring and control directly from Home Assistant using the Omlet [Python SDK] (https://smart.omlet.com/developers/python-sdk).
 
 ## Features
 
