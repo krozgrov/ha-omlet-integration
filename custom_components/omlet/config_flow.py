@@ -3,7 +3,7 @@ import asyncio
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.data_entry_flow import FlowResult
-from .const import DOMAIN, BASE_URL, CONF_API_KEY
+from .const import DOMAIN, API_BASE_URL, CONF_API_KEY
 
 
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -22,7 +22,7 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 async with aiohttp.ClientSession() as session:
                     headers = {"Authorization": f"Bearer {api_key}"}
                     async with session.get(
-                        f"{BASE_URL}/whoami", headers=headers, timeout=10
+                        f"{API_BASE_URL}/whoami", headers=headers, timeout=10
                     ) as response:
                         if response.status == 200:
                             # Successfully validated, create the config entry
