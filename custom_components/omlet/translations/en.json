@@ -1,0 +1,10 @@
+{
+    "domain": "omlet_integration",
+    "name": "Omlet Integration",
+    "version": "1.0.0",
+    "documentation": "https://github.com/krozgrov/ha-omlet-integration",
+    "dependencies": [],
+    "codeowners": ["@krozgrov"],
+    "requirements": ["Omlet Smart Coop API==1.0.1"],
+    "iot_class": "cloud_polling"
+  }
