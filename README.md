@@ -91,7 +91,7 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ## Support
 
 If you encounter any issues or have questions, feel free to:
-- Open an [issue](https://github.com/your-repo/omlet_integration/issues).
+- Open an [issue](https://github.com/krozgrov/ha-omlet-integration/issues).
 - Join the Home Assistant community for support.
 
 ## Future Enhancements
