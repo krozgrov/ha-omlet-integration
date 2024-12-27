@@ -1,11 +1,11 @@
 
 # Omlet Home Assistant Integration
 
-A **custom integration for Home Assistant** that connects your Omlet Smart Coop and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Python SDK.
+A **custom integration for Home Assistant** that connects your Omlet Smart Coop and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Offical API.
 
 ## Features
 
-- **Device Support:** Automatically detect and add supported Omlet devices like the Autodoor.
+- **Device Support:** Automatically detect and add supported Omlet devices like the Smart Autodoor.
 - **Entity Creation:**
   - Monitor battery levels, Wi-Fi signal strength, and device uptime.
   - Control and monitor the door state (`open`, `closed`) and light state (`on`, `off`).
@@ -25,7 +25,7 @@ A **custom integration for Home Assistant** that connects your Omlet Smart Coop 
 
 ### Manual Installation
 1. Download the repository as a ZIP file.
-2. Extract the contents into the `custom_components/omlet_integration` directory within your Home Assistant configuration folder.
+2. Extract the contents into the `custom_components/omlet` directory within your Home Assistant configuration folder.
 3. Restart Home Assistant.
 
 ### Using HACS
@@ -42,13 +42,13 @@ A **custom integration for Home Assistant** that connects your Omlet Smart Coop 
 
 ### Supported Platforms
 - **Sensors:**
-  - Battery level
-  - Wi-Fi signal strength
-  - Door state
-  - Light state
+  - Battery level - In-progress
+  - Wi-Fi signal strength - In-progress
+  - Door state - In-progress
+  - Light state - In-progress
 - **Switches:**
-  - Door control (open/close)
-  - Light control (on/off)
+  - Door control (open/close) - In-progress
+  - Light control (on/off) - Working
 
 ### Advanced Configuration
 You can configure polling intervals, time zones, and sleep settings directly in the device settings.
@@ -64,7 +64,7 @@ You can configure polling intervals, time zones, and sleep settings directly in 
 
 ## API Details
 
-This integration uses the [Omlet Python SDK and API](https://smart.omlet.com/developers/api#/). It fetches device states, performs actions, and listens for updates.
+This integration uses the [Omlet API](https://smart.omlet.com/developers/api#/). It fetches device states, performs actions, and listens for updates.
 
 Key API endpoints used:
 - `/device` - Retrieve device information.
