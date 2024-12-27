@@ -5,7 +5,8 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from .const import DOMAIN
-from smartcoop import SmartCoopClient, SmartCoopAuthenticationError
+from smartcoop.client import SmartCoopClient
+from smartcoop.api.omlet import Omlet
 
 
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
