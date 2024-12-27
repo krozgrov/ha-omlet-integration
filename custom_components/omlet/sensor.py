@@ -1,70 +1,54 @@
-import aiohttp
 from homeassistant.components.sensor import SensorEntity
-from homeassistant.const import PERCENTAGE
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
 from .const import DOMAIN, API_BASE_URL, CONF_API_KEY
+import aiohttp
 
 
-async def async_setup_entry(hass, entry, async_add_entities):
-    """Set up sensors for the Omlet Smart Coop integration."""
-    api_key = hass.data[DOMAIN][entry.entry_id][CONF_API_KEY]
-    headers = {"Authorization": f"Bearer {api_key}"}
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+):
+    """Set up sensors for the Omlet Smart Coop."""
+    api_key = entry.data.get(CONF_API_KEY)  # Retrieve API key from entry data
+    if not api_key:
+        raise ValueError("API key not found in config entry")
 
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(
-                f"{API_BASE_URL}/device", headers=headers, timeout=10
-            ) as response:
-                if response.status == 200:
-                    devices = await response.json()
-                else:
-                    raise ValueError(f"Failed to fetch devices: {response.status}")
-    except Exception as e:
-        hass.logger.error(f"Error fetching devices for sensors: {e}")
-        return
+    # Fetch devices from the API
+    async with aiohttp.ClientSession() as session:
+        headers = {"Authorization": f"Bearer {api_key}"}
+        async with session.get(
+            f"{API_BASE_URL}/device", headers=headers, timeout=10
+        ) as response:
+            if response.status != 200:
+                raise RuntimeError(f"Failed to fetch devices: {response.status}")
+            devices = await response.json()
 
-    # Create battery sensors for all devices
-    sensors = [
-        OmletBatterySensor(device) for device in devices if "general" in device["state"]
-    ]
+    sensors = [OmletBatterySensor(device, api_key) for device in devices]
     async_add_entities(sensors)
 
 
 class OmletBatterySensor(SensorEntity):
-    """A sensor for monitoring battery levels of the Omlet Smart Coop."""
+    """A battery level sensor for the Omlet Smart Coop."""
 
-    def __init__(self, device):
+    def __init__(self, device, api_key):
         self._device = device
+        self._api_key = api_key
         self._attr_name = f"{device['name']} Battery"
         self._attr_unique_id = f"{device['deviceId']}_battery"
-        self._attr_unit_of_measurement = PERCENTAGE
         self._attr_state = device["state"]["general"]["batteryLevel"]
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, device["deviceId"])},
-            "name": device["name"],
-            "manufacturer": "Omlet",
-            "model": device["deviceType"],
-        }
 
     async def async_update(self):
-        """Fetch the latest data for the sensor."""
-        api_key = self.hass.data[DOMAIN][CONF_API_KEY]
-        headers = {"Authorization": f"Bearer {api_key}"}
-
-        try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"{API_BASE_URL}/device/{self._device['deviceId']}",
-                    headers=headers,
-                    timeout=10,
-                ) as response:
-                    if response.status == 200:
-                        device_data = await response.json()
-                        self._attr_state = device_data["state"]["general"][
-                            "batteryLevel"
-                        ]
-                    else:
-                        self.hass.logger.error(
-                            f"Failed to update battery sensor: {response.status}"
-                        )
-        except Exception as e:
-            self.hass.logger.error(f"Error updating battery sensor: {e}")
+        """Fetch new data for the sensor."""
+        async with aiohttp.ClientSession() as session:
+            headers = {"Authorization": f"Bearer {self._api_key}"}
+            async with session.get(
+                f"{API_BASE_URL}/device/{self._device['deviceId']}",
+                headers=headers,
+                timeout=10,
+            ) as response:
+                if response.status != 200:
+                    raise RuntimeError(
+                        f"Failed to fetch device state: {response.status}"
+                    )
+                device_data = await response.json()
+                self._attr_state = device_data["state"]["general"]["batteryLevel"]
