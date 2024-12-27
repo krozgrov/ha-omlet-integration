@@ -3,7 +3,7 @@
 from homeassistant.const import Platform
 
 # Domain of the integration
-DOMAIN = "omlet_integration"
+DOMAIN = "omlet_smart_coop"
 
 # Supported platforms
 PLATFORMS: list[Platform] = [Platform.SENSOR, Platform.SWITCH]

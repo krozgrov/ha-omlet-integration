@@ -1,10 +1,12 @@
 {
-    "domain": "omlet_integration",
-    "name": "Omlet Integration",
-    "version": "1.0.0",
-    "documentation": "https://github.com/krozgrov/ha-omlet-integration",
-    "dependencies": [],
-    "codeowners": ["@krozgrov"],
-    "requirements": ["Omlet Smart Coop API==1.0.1"],
-    "iot_class": "cloud_polling"
-  }
+  "domain": "omlet_smart_coop",
+  "name": "Omlet Smart Coop",
+  "codeowners": ["@krozgrov"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/krozgrov/ha-omlet-integration",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/krozgrov/ha-omlet-integration/issues",
+  "requirements": ["smartcoop-python-sdk"],
+  "version": "1.0.0"
+}

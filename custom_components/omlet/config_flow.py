@@ -5,7 +5,8 @@ from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from .const import DOMAIN
-from omlet_sdk import OmletClient
+from smartcoop import SmartCoopClient, SmartCoopAuthenticationError
+
 
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Omlet integration."""
@@ -33,7 +34,9 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_email_password(self, user_input: dict | None = None) -> FlowResult:
+    async def async_step_email_password(
+        self, user_input: dict | None = None
+    ) -> FlowResult:
         """Step for setting up via email and password."""
         errors = {}
 
@@ -41,12 +44,15 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             email = user_input.get("email")
             password = user_input.get("password")
 
-            # Validate credentials and generate API key
+            # Validate credentials and generate API key using smartcoop-python-sdk
             try:
-                client = OmletClient(email=email, password=password)
-                api_key = await self.hass.async_add_executor_job(client.generate_api_key)
-            except Exception:
+                client = SmartCoopClient(email=email, password=password)
+                api_key = await self.hass.async_add_executor_job(client.get_api_key)
+            except SmartCoopAuthenticationError:
                 errors["base"] = "invalid_auth"
+            except Exception as e:
+                errors["base"] = "unknown"
+                self.logger.error(f"Unexpected error: {e}")
             else:
                 # Create a new config entry
                 return self.async_create_entry(
@@ -73,12 +79,15 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             api_key = user_input.get("api_key")
 
-            # Validate the API key
+            # Validate the API key using smartcoop-python-sdk
             try:
-                client = OmletClient(api_key=api_key)
+                client = SmartCoopClient(api_key=api_key)
                 await self.hass.async_add_executor_job(client.validate_api_key)
-            except Exception:
+            except SmartCoopAuthenticationError:
                 errors["base"] = "invalid_api_key"
+            except Exception as e:
+                errors["base"] = "unknown"
+                self.logger.error(f"Unexpected error: {e}")
             else:
                 # Create a new config entry
                 return self.async_create_entry(

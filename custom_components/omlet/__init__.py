@@ -7,12 +7,14 @@ from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from .const import DOMAIN, PLATFORMS
-from omlet_sdk import OmletClient
+from smartcoop import SmartCoopClient  # Updated to use the correct SDK
+
 
 async def async_setup(hass: HomeAssistant, config: dict[str, Any]) -> bool:
     """Set up Omlet integration using YAML (not supported)."""
     # This integration uses UI-based configuration only
     return True
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Omlet integration from a config entry."""
@@ -22,13 +24,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Get API key from the config entry
     api_key = entry.data["api_key"]
 
-    # Initialize the OmletClient and store it in hass.data
-    client = OmletClient(api_key=api_key)
-    hass.data[DOMAIN][entry.entry_id] = client
+    # Initialize the SmartCoopClient and store it in hass.data
+    try:
+        client = SmartCoopClient(api_key=api_key)
+        hass.data[DOMAIN][entry.entry_id] = client
+    except Exception as e:
+        # Log an error if the client initialization fails
+        hass.logger.error(f"Error initializing SmartCoopClient: {e}")
+        return False
 
     # Forward the setup to supported platforms (e.g., sensor, switch)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
+
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
