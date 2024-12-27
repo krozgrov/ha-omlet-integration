@@ -1,7 +1,7 @@
 
 # Omlet Home Assistant Integration
 
-A **custom integration for Home Assistant** that connects your Omlet Smart Coop and related devices, enabling monitoring and control directly from Home Assistant using the Omlet [Python SDK] (https://smart.omlet.com/developers/python-sdk).
+A **custom integration for Home Assistant** that connects your Omlet Smart Coop and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Python SDK.
 
 ## Features
 
@@ -64,7 +64,7 @@ You can configure polling intervals, time zones, and sleep settings directly in 
 
 ## API Details
 
-This integration uses the [Omlet API](https://smart.omlet.com/developers/api#/). It fetches device states, performs actions, and listens for updates.
+This integration uses the [Omlet Python SDK and API](https://smart.omlet.com/developers/api#/). It fetches device states, performs actions, and listens for updates.
 
 Key API endpoints used:
 - `/device` - Retrieve device information.
