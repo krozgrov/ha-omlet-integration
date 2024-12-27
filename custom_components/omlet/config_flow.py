@@ -1,12 +1,10 @@
-from __future__ import annotations
-
+from smartcoop.client import SmartCoopClient
+from smartcoop.api.omlet import Omlet
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.core import callback
 from homeassistant.data_entry_flow import FlowResult
 from .const import DOMAIN
-from smartcoop.client import SmartCoopClient
-from smartcoop.api.omlet import Omlet
 
 
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -17,89 +15,57 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input: dict | None = None) -> FlowResult:
         """Handle the initial step."""
         if user_input is not None:
-            # Redirect to the appropriate step based on the user's choice
-            if user_input["setup_method"] == "email_password":
-                return await self.async_step_email_password()
-            if user_input["setup_method"] == "api_key":
-                return await self.async_step_api_key()
+            # Use the client_secret directly for setup
+            return await self.async_step_client_secret(user_input)
 
-        # Ask the user how they want to set up the integration
+        # Ask the user for the client_secret
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required("setup_method", default="email_password"): vol.In(
-                        {"email_password": "Email and Password", "api_key": "API Key"}
-                    )
+                    vol.Required("client_secret"): str,  # Request the client_secret
                 }
             ),
         )
 
-    async def async_step_email_password(
-        self, user_input: dict | None = None
-    ) -> FlowResult:
-        """Step for setting up via email and password."""
+    async def async_step_client_secret(self, user_input: dict) -> FlowResult:
+        """Step for setting up using client_secret."""
         errors = {}
 
         if user_input is not None:
-            email = user_input.get("email")
-            password = user_input.get("password")
+            client_secret = user_input.get("client_secret")
 
-            # Validate credentials and generate API key using smartcoop-python-sdk
+            # Validate the client_secret
             try:
-                client = SmartCoopClient(email=email, password=password)
-                api_key = await self.hass.async_add_executor_job(client.get_api_key)
-            except SmartCoopAuthenticationError:
-                errors["base"] = "invalid_auth"
+                client = SmartCoopClient(
+                    client_secret=client_secret
+                )  # Initialize the client
+                omlet = Omlet(client)  # Access Omlet API to test the connection
+                devices = await self.hass.async_add_executor_job(
+                    omlet.get_devices
+                )  # Example API call
+                if not devices:
+                    errors["base"] = "no_devices"
             except Exception as e:
-                errors["base"] = "unknown"
-                self.logger.error(f"Unexpected error: {e}")
+                self.hass.logger.error(
+                    f"Error authenticating with SmartCoopClient: {e}"
+                )
+                errors["base"] = "invalid_auth"
             else:
                 # Create a new config entry
                 return self.async_create_entry(
-                    title="Omlet Integration",
-                    data={"email": email, "password": password, "api_key": api_key},
+                    title="Omlet Smart Coop",
+                    data={"client_secret": client_secret},
                 )
 
-        # Show the form for email and password
+        # Show the form again with an error message
         return self.async_show_form(
-            step_id="email_password",
+            step_id="client_secret",
             data_schema=vol.Schema(
                 {
-                    vol.Required("email"): str,
-                    vol.Required("password"): str,
+                    vol.Required("client_secret"): str,
                 }
             ),
-            errors=errors,
-        )
-
-    async def async_step_api_key(self, user_input: dict | None = None) -> FlowResult:
-        """Step for setting up with an existing API key."""
-        errors = {}
-
-        if user_input is not None:
-            api_key = user_input.get("api_key")
-
-            # Validate the API key using smartcoop-python-sdk
-            try:
-                client = SmartCoopClient(api_key=api_key)
-                await self.hass.async_add_executor_job(client.validate_api_key)
-            except SmartCoopAuthenticationError:
-                errors["base"] = "invalid_api_key"
-            except Exception as e:
-                errors["base"] = "unknown"
-                self.logger.error(f"Unexpected error: {e}")
-            else:
-                # Create a new config entry
-                return self.async_create_entry(
-                    title="Omlet Integration",
-                    data={"api_key": api_key},
-                )
-
-        # Show the form for API key
-        return self.async_show_form(
-            step_id="api_key",
-            data_schema=vol.Schema({vol.Required("api_key"): str}),
             errors=errors,
         )
 
