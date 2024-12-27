@@ -88,6 +88,7 @@ DEBUG_ENABLED = False  # Can be toggled for verbose logging
 
 # API-specific constants
 API_BASE_URL = "https://x107.omlet.co.uk/api/v1"
+CONF_API_KEY = "api_key"
 API_ENDPOINT_DEVICES = "/device"
 API_ENDPOINT_DEVICE_ACTION = "/device/{deviceId}/action/{action}"
 API_ENDPOINT_DEVICE_CONFIG = "/device/{deviceId}/configuration"

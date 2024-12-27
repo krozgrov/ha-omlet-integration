@@ -2,7 +2,7 @@ import aiohttp
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, BASE_URL, CONF_API_KEY
+from .const import DOMAIN, API_BASE_URL, CONF_API_KEY
 
 
 async def async_setup_entry(
@@ -15,7 +15,7 @@ async def async_setup_entry(
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                f"{BASE_URL}/device", headers=headers, timeout=10
+                f"{API_BASE_URL}/device", headers=headers, timeout=10
             ) as response:
                 if response.status == 200:
                     devices = await response.json()
@@ -63,7 +63,9 @@ class OmletLightSwitch(SwitchEntity):
 
     async def _perform_action(self, action_name):
         """Perform the specified action on the device."""
-        action_url = f"{BASE_URL}/device/{self._device['deviceId']}/action/{action_name}"
+        action_url = (
+            f"{API_BASE_URL}/device/{self._device['deviceId']}/action/{action_name}"
+        )
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.post(

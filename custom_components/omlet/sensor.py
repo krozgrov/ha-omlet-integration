@@ -1,7 +1,7 @@
 import aiohttp
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.const import PERCENTAGE
-from .const import DOMAIN, BASE_URL, CONF_API_KEY
+from .const import DOMAIN, API_BASE_URL, CONF_API_KEY
 
 
 async def async_setup_entry(hass, entry, async_add_entities):
@@ -11,7 +11,9 @@ async def async_setup_entry(hass, entry, async_add_entities):
 
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{BASE_URL}/device", headers=headers, timeout=10) as response:
+            async with session.get(
+                f"{API_BASE_URL}/device", headers=headers, timeout=10
+            ) as response:
                 if response.status == 200:
                     devices = await response.json()
                 else:
@@ -51,13 +53,15 @@ class OmletBatterySensor(SensorEntity):
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"{BASE_URL}/device/{self._device['deviceId']}",
+                    f"{API_BASE_URL}/device/{self._device['deviceId']}",
                     headers=headers,
                     timeout=10,
                 ) as response:
                     if response.status == 200:
                         device_data = await response.json()
-                        self._attr_state = device_data["state"]["general"]["batteryLevel"]
+                        self._attr_state = device_data["state"]["general"][
+                            "batteryLevel"
+                        ]
                     else:
                         self.hass.logger.error(
                             f"Failed to update battery sensor: {response.status}"
