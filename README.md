@@ -42,13 +42,13 @@ A **custom integration for Home Assistant** that connects your Omlet Smart Coop 
 
 ### Supported Platforms
 - **Sensors:**
-  - Battery level - In-progress
+  - Battery level - Implemented
   - Wi-Fi signal strength - In-progress
   - Door state - In-progress
   - Light state - In-progress
 - **Switches:**
-  - Door control (open/close) - In-progress
-  - Light control (on/off) - Working
+  - Door control (open/close) - Implemented
+  - Light control (on/off) - Implemented
 
 ### Advanced Configuration
 You can configure polling intervals, time zones, and sleep settings directly in the device settings.
@@ -97,5 +97,4 @@ If you encounter any issues or have questions, feel free to:
 ## Future Enhancements
 
 - Webhook integration for real-time updates.
-- Additional device types and actions.
 - Enhanced diagnostics and error handling.
