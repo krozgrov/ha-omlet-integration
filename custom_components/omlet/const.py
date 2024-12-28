@@ -25,8 +25,13 @@ ATTR_SIGNAL_STRENGTH = "signal_strength"  # Wi-Fi signal strength (e.g., RSSI)
 # Entity states
 STATE_DOOR_OPEN = "open"
 STATE_DOOR_CLOSED = "closed"
+STATE_DOOR_PENDING = 'pending'
 STATE_LIGHT_ON = "on"
 STATE_LIGHT_OFF = "off"
+
+# Action states
+DOOR_ACTION_OPEN = "open"
+DOOR_ACTION_CLOSE = 'close'
 
 # Configuration keys
 CONF_TIMEZONE = "timezone"
