@@ -6,20 +6,20 @@ from .api_client import OmletApiClient
 
 
 class CannotConnect(HomeAssistantError):
-    """Error to indicate we cannot connect."""
+    # Error to indicate we cannot connect.
 
 
 class InvalidAuth(HomeAssistantError):
-    """Error to indicate invalid authentication."""
+    # Error to indicate invalid authentication.
 
 
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle the config flow for Omlet Smart Coop."""
+    # Handle the config flow for Omlet Smart Coop.
 
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        """Handle the user step."""
+        # Handle the user step.
         errors = {}
         if user_input is not None:
             try:
@@ -52,13 +52,13 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_reauth(self, entry_data):
-        """Handle reauthentication."""
+        # Handle reauthentication.
         self.reauth_entry = entry_data
         await self.async_set_unique_id("omlet_coop")
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(self, user_input=None):
-        """Handle reauthentication confirmation."""
+        # Handle reauthentication confirmation.
         errors = {}
         if user_input is not None:
             try:
@@ -92,7 +92,7 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def _validate_input(self, data):
-        """Validate the user input."""
+        # Validate the user input.
         api_key = data[CONF_API_KEY]
 
         # Use the API client to validate

@@ -7,10 +7,10 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class OmletDataCoordinator(DataUpdateCoordinator):
-    """Coordinator for fetching and structuring data from the Omlet API."""
+    # Coordinator for fetching and structuring data from the Omlet API.
 
     def __init__(self, hass, api_key, update_interval_seconds):
-        """Initialize the coordinator."""
+        # Initialize the coordinator.
         super().__init__(
             hass,
             _LOGGER,
@@ -22,7 +22,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         self.devices = {}
 
     async def _async_update_data(self):
-        """Fetch and process data from the API."""
+        # Fetch and process data from the API.
         try:
             # Fetch devices from the API
             _LOGGER.debug("Fetching devices from Omlet API...")

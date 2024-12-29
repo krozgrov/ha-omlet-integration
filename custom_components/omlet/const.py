@@ -1,4 +1,4 @@
-"""Constants for Omlet Integration."""
+# Constants for Omlet Integration.
 
 from homeassistant.const import Platform
 

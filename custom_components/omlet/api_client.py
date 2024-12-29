@@ -7,18 +7,18 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class OmletApiClient:
-    """Client for interacting with the Omlet API."""
+    # Client for interacting with the Omlet API.
 
     BASE_URL = "https://x107.omlet.co.uk/api/v1"
 
     def __init__(self, api_key: str):
-        """Initialize the API client."""
+        # Initialize the API client.
         self.api_key = api_key
         self._headers = {"Authorization": f"Bearer {self.api_key}"}
         self._timeout = 10
 
     async def is_valid(self) -> bool:
-        """Validate the connection to the API."""
+        # Validate the connection to the API.
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -32,7 +32,7 @@ class OmletApiClient:
             return False
 
     async def fetch_devices(self) -> List[Dict[str, Any]]:
-        """Fetch the list of devices."""
+        # Fetch the list of devices.
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(

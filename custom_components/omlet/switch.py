@@ -8,7 +8,7 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
-    """Set up the switches from the config entry."""
+    # Set up the switches from the config entry.
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
 
     _LOGGER.debug("Setting up switches for devices: %s", coordinator.data)
@@ -41,10 +41,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 
 class OmletSwitch(OmletEntity, SwitchEntity):
-    """Representation of a switch for Omlet devices."""
+    # Representation of a switch for Omlet devices.
 
     def __init__(self, coordinator, device_id, key, device_name):
-        """Initialize the switch."""
+        # Initialize the switch.
         super().__init__(coordinator, device_id)
         self._key = key
         self._attr_name = key.title()
@@ -54,7 +54,7 @@ class OmletSwitch(OmletEntity, SwitchEntity):
 
     @property
     def available(self):
-        """Return if entity is available."""
+        # Return if entity is available.
         device_data = self.coordinator.data.get(self.device_id, {})
         if self._key == "door":
             state = device_data["state"]["door"]["state"]
@@ -68,7 +68,7 @@ class OmletSwitch(OmletEntity, SwitchEntity):
 
     @property
     def is_on(self):
-        """Return whether the switch is on."""
+        # Return whether the switch is on.
         device_data = self.coordinator.data.get(self.device_id, {})
         if self._key == "door":
             state = device_data["state"]["door"]["state"]
@@ -79,19 +79,19 @@ class OmletSwitch(OmletEntity, SwitchEntity):
         return False
 
     async def async_turn_on(self, **kwargs):
-        """Turn the switch on."""
+        # Turn the switch on.
         action_value = "on" if self._key == "light" else "open"
         await self._execute_action(action_value)
         await self.coordinator.async_request_refresh()
 
     async def async_turn_off(self, **kwargs):
-        """Turn the switch off."""
+        # Turn the switch off.
         action_value = "off" if self._key == "light" else "close"
         await self._execute_action(action_value)
         await self.coordinator.async_request_refresh()
 
     async def _execute_action(self, action):
-        """Execute an action on the device."""
+        # Execute an action on the device.
         device_data = self.coordinator.data.get(self.device_id, {})
         action_url = next(
             (a["url"] for a in device_data["actions"] if a["actionValue"] == action),

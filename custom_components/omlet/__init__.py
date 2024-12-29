@@ -6,7 +6,7 @@ from .const import DOMAIN, PLATFORMS
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Omlet Smart Coop from a config entry."""
+    # Set up Omlet Smart Coop from a config entry.
     hass.data.setdefault(DOMAIN, {})
 
     coordinator = OmletDataCoordinator(
@@ -23,7 +23,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry."""
+    # Unload a config entry.
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
