@@ -1,7 +1,8 @@
 from homeassistant import config_entries
 from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
-from .const import DOMAIN, CONF_API_KEY, CONF_HOST
+from .const import DOMAIN, CONF_API_KEY
+from .api_client import OmletApiClient
 
 
 # Error to indicate we cannot connect.
@@ -14,7 +15,7 @@ class InvalidAuth(HomeAssistantError):
     pass
 
 
-# Handle the config flow for Omlet Smar Coop.
+# Handle the config flow for Omlet Smart Coop.
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
@@ -28,14 +29,16 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
+            except Exception:
+                errors["base"] = "unknown"
             else:
                 # Set unique ID and abort if already configured
-                await self.async_set_unique_id(user_input[CONF_HOST])
+                await self.async_set_unique_id("omlet_coop")
                 self._abort_if_unique_id_configured()
 
                 # Create the configuration entry
                 return self.async_create_entry(
-                    title=user_input[CONF_HOST],
+                    title="Omlet Smart Coop",
                     data=user_input,
                 )
 
@@ -43,7 +46,6 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_HOST): str,
                     vol.Required(CONF_API_KEY): str,
                 }
             ),
@@ -53,7 +55,7 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_reauth(self, entry_data):
         # Handle reauthentication.
         self.reauth_entry = entry_data
-        await self.async_set_unique_id(entry_data[CONF_HOST])
+        await self.async_set_unique_id("omlet_coop")
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(self, user_input=None):
@@ -66,6 +68,8 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "cannot_connect"
             except InvalidAuth:
                 errors["base"] = "invalid_auth"
+            except Exception:
+                errors["base"] = "unknown"
             else:
                 # Update entry with new API key
                 self.hass.config_entries.async_update_entry(
@@ -90,9 +94,9 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _validate_input(self, data):
         # Validate the user input.
-        host = data[CONF_HOST]
         api_key = data[CONF_API_KEY]
 
-        # Replace this with API validation logic
-        if not await MyApiClient(host, api_key).is_valid():
+        # Use the API client to validate
+        client = OmletApiClient(api_key=api_key)  # No host needed
+        if not await client.is_valid():
             raise InvalidAuth
