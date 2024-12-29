@@ -1,82 +1,149 @@
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN, ATTR_BATTERY_LEVEL
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
+from homeassistant.const import PERCENTAGE, SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+from .const import DOMAIN
 from .coordinator import OmletDataCoordinator
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+):
     """Set up sensors for the Omlet Smart Coop."""
     coordinator: OmletDataCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
     sensors = []
-    _LOGGER.debug("Coordinator data: %s", coordinator.data)
-
     for device in coordinator.data:
         device_id = device.get("deviceId")
         device_name = device.get("name", "Unknown Device")
         manufacturer = "Omlet"
         model = device.get("deviceType", "Unknown Model")
 
-        sensors.append(OmletSensor(coordinator, device_id, device, "batteryLevel", f"{device_name} Battery Level", "%", manufacturer, model, True))
-        sensors.append(OmletSensor(coordinator, device_id, device, "wifiStrength", f"{device_name} WiFi Signal Strength", "dBm", manufacturer, model, False))
-        sensors.append(OmletSensor(coordinator, device_id, device, "firmwareVersionCurrent", f"{device_name} Firmware Version", None, manufacturer, model, False))
+        # Register the device in Home Assistant
+        device_info = DeviceInfo(
+            identifiers={(DOMAIN, device_id)},
+            name=device_name,
+            manufacturer=manufacturer,
+            model=model,
+            entry_type=DeviceEntryType.SERVICE,
+        )
+
+        # Add battery level sensor
+        sensors.append(
+            OmletBatterySensor(
+                coordinator,
+                device_id,
+                "batteryLevel",
+                device_info,
+            )
+        )
+
+        # Add WiFi signal strength sensor
+        sensors.append(
+            OmletWiFiSensor(
+                coordinator,
+                device_id,
+                "wifiStrength",
+                device_info,
+            )
+        )
+
+        # Add firmware version sensor
+        sensors.append(
+            OmletFirmwareSensor(
+                coordinator,
+                device_id,
+                "firmwareVersionCurrent",
+                device_info,
+            )
+        )
 
     async_add_entities(sensors)
 
 
-class OmletSensor(SensorEntity):
-    """Representation of an Omlet sensor."""
+class OmletBatterySensor(CoordinatorEntity, SensorEntity):
+    """Representation of the battery level sensor."""
 
-    def __init__(self, coordinator, device_id, device_data, key, name, unit, manufacturer, model, is_battery):
+    _attr_device_class = SensorDeviceClass.BATTERY
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator, device_id, key, device_info):
         """Initialize the sensor."""
-        self.coordinator = coordinator
+        super().__init__(coordinator)
         self._device_id = device_id
-        self._device_data = device_data
         self._key = key
-        self._attr_name = name
+        self._attr_name = "Battery Level"
         self._attr_unique_id = f"{device_id}_{key}"
-        self._attr_native_unit_of_measurement = unit
-        self._is_battery = is_battery
-
-        # Include battery_level in device_info if this is the battery sensor
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, device_id)},
-            "name": device_data.get("name", "Unknown Device"),
-            "manufacturer": manufacturer,
-            "model": model,
-        }
-        if self._is_battery:
-            self._attr_device_info["via_device"] = f"{device_data.get('deviceId')}"
-            self._attr_device_info["capabilities"] = {"battery_level": self.native_value}
+        self._attr_device_info = device_info
 
     @property
     def native_value(self):
-        """Return the current value of the sensor."""
-        try:
-            # Debug log to verify the coordinator data structure
-            _LOGGER.debug("Sensor [%s]: Coordinator data: %s", self._key, self.coordinator.data)
+        """Return the current battery level."""
+        device_data = next(
+            (d for d in self.coordinator.data if d.get("deviceId") == self._device_id),
+            {},
+        )
+        return device_data.get("state", {}).get("general", {}).get(self._key)
 
-            # Locate device in data
-            device_data = next(
-                (d for d in self.coordinator.data if d.get("deviceId") == self._device_id), None
-            )
 
-            if device_data:
-                # Handle general and connectivity state separately
-                if self._key == "wifiStrength":
-                    return device_data.get("state", {}).get("connectivity", {}).get("wifiStrength")
-                return device_data.get("state", {}).get("general", {}).get(self._key)
+class OmletWiFiSensor(CoordinatorEntity, SensorEntity):
+    """Representation of the WiFi signal strength sensor."""
 
-            _LOGGER.error("Device %s not found in coordinator data", self._device_id)
-            return None
-        except Exception as e:
-            _LOGGER.error("Error retrieving data for sensor %s: %s", self._key, e)
-            return None
+    _attr_device_class = SensorDeviceClass.SIGNAL_STRENGTH
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_native_unit_of_measurement = SIGNAL_STRENGTH_DECIBELS_MILLIWATT
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
-    async def async_update(self):
-        """Request an update from the coordinator."""
-        await self.coordinator.async_request_refresh()
+    def __init__(self, coordinator, device_id, key, device_info):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._device_id = device_id
+        self._key = key
+        self._attr_name = "WiFi Signal Strength"
+        self._attr_unique_id = f"{device_id}_{key}"
+        self._attr_device_info = device_info
+
+    @property
+    def native_value(self):
+        """Return the current WiFi signal strength."""
+        device_data = next(
+            (d for d in self.coordinator.data if d.get("deviceId") == self._device_id),
+            {},
+        )
+        return device_data.get("state", {}).get("connectivity", {}).get(self._key)
+
+
+class OmletFirmwareSensor(CoordinatorEntity, SensorEntity):
+    """Representation of the firmware version sensor."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator, device_id, key, device_info):
+        """Initialize the sensor."""
+        super().__init__(coordinator)
+        self._device_id = device_id
+        self._key = key
+        self._attr_name = "Firmware Version"
+        self._attr_unique_id = f"{device_id}_{key}"
+        self._attr_device_info = device_info
+
+    @property
+    def native_value(self):
+        """Return the current firmware version."""
+        device_data = next(
+            (d for d in self.coordinator.data if d.get("deviceId") == self._device_id),
+            {},
+        )
+        return device_data.get("state", {}).get("general", {}).get(self._key)
