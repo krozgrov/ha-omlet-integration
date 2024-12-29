@@ -1,5 +1,5 @@
 
-# Home Assistant Omlet Integration
+# Home Assistant - Omlet Integration
 
 A **custom integration for Home Assistant** that connects your Omlet Smart Coop and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Offical API.
 
