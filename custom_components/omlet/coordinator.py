@@ -19,14 +19,19 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         )
         self.api_key = api_key
         self.api_client = OmletApiClient(api_key)
-        self.devices = {}  # Will hold all parsed device data
+        self.devices = {}
 
     async def _async_update_data(self):
         """Fetch and process data from the API."""
         try:
             # Fetch devices from the API
+            _LOGGER.debug("Fetching devices from Omlet API...")
             devices_data = await self.api_client.fetch_devices()
-            _LOGGER.debug("Fetched devices data: %s", devices_data)
+            _LOGGER.debug("Raw devices data from API: %s", devices_data)
+
+            # Log the structure of the first device if available
+            if devices_data and len(devices_data) > 0:
+                _LOGGER.debug("First device structure: %s", devices_data[0])
 
             # Parse and structure the devices data
             self.devices = {
@@ -180,6 +185,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
                 for device in devices_data
             }
 
+            _LOGGER.debug("Processed devices data: %s", self.devices)
             return self.devices
 
         except Exception as err:

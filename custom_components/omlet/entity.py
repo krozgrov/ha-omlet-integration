@@ -17,16 +17,15 @@ class OmletEntity(CoordinatorEntity):
             name=device_data["name"],
             manufacturer="Omlet",
             model="Autodoor",
-            sw_version=device_data.get(
-                "firmware_version", "Unknown"
-            ),  # Dynamically linked firmware
+            sw_version=device_data["state"]["general"]["firmwareVersionCurrent"],
+            # Remove battery_level from DeviceInfo
         )
 
     @property
     def device_info(self):
-        """Return updated device info."""
+        """Return device info."""
         device_data = self.coordinator.data[self.device_id]
-        self._attr_device_info["sw_version"] = device_data.get(
-            "firmware_version", "Unknown"
-        )
+        self._attr_device_info["sw_version"] = device_data["state"]["general"][
+            "firmwareVersionCurrent"
+        ]
         return self._attr_device_info
