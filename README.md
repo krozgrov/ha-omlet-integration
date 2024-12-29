@@ -8,7 +8,8 @@ A **custom integration for Home Assistant** that connects your Omlet Smart Autom
 - **Device Support:** Automatically detects and adds supported Omlet device - Smart Automatic Chicken Coop Door https://www.omlet.us/smart-automatic-chicken-coop-door/.
 - **Entity Creation:**
   - Monitor battery levels, Wi-Fi signal strength, and device uptime.
-  <img width="804" alt="Screenshot 2024-12-29 at 3 47 54 PM" src="https://github.com/user-attachments/assets/daaf30cc-9804-43ef-bdbc-b21066016b3f" />
+  <img width="804" alt="Screenshot 2024-12-29 at 3 47 54 PM" src="https://github.com/user-attachments/assets/76ad0dac-3198-4cbc-beb4-4022b8c24e25" />
+
 
     
 
