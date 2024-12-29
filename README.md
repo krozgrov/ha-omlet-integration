@@ -3,7 +3,12 @@
 
 A **custom integration for Home Assistant** that connects your Omlet Smart Automatic Chicken Coop Door and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Offical API.
 
-buymeacoffee.com/krozgrov
+## Sponsor
+
+A lot of effort is going into that integration. So if you can afford it and want to support me:
+
+<a href="https://www.buymeacoffee.com/krozgrov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+
 
 ## Features
 
@@ -16,12 +21,6 @@ buymeacoffee.com/krozgrov
   - Turn lights on/off.
   <img width="804" alt="Screenshot 2024-12-29 at 3 47 54 PM" src="https://github.com/user-attachments/assets/76ad0dac-3198-4cbc-beb4-4022b8c24e25" />
 
-
-    
-
-    
-
-
 ## Installation
 
 ### Prerequisites
@@ -33,7 +32,7 @@ buymeacoffee.com/krozgrov
 2. Extract the contents into the `custom_components/omlet` directory within your Home Assistant configuration folder.
 3. Restart Home Assistant.
 
-### Using HACS
+### Using HACS - In-progress
 1. Add this repository as a custom repository in HACS.
 2. Search for **Omlet Integration** and install it.
 3. Restart Home Assistant.
@@ -45,28 +44,6 @@ buymeacoffee.com/krozgrov
 3. Enter your API key.
 4. Devices will be automatically discovered and added.
 
-### Supported Platforms
-- **Sensors:**
-  - Battery level - Implemented
-  - Wi-Fi signal strength - In-progress
-  - Door state - In-progress
-  - Light state - In-progress
-- **Switches:**
-  - Door control (open/close) - Implemented
-  - Light control (on/off) - Implemented
-
-### Advanced Configuration
-You can configure polling intervals, time zones, and sleep settings directly in the device settings.
-
-## Example Entities
-
-| Entity ID                     | Description            | Example State |
-|-------------------------------|------------------------|---------------|
-| `sensor.autodoor_battery`     | Battery level          | `89%`         |
-| `sensor.autodoor_wifi`        | Wi-Fi signal strength  | `-67 dBm`     |
-| `switch.autodoor_door`        | Door control           | `open/closed` |
-| `switch.autodoor_light`       | Light control          | `on/off`      |
-
 ## API Details
 
 This integration uses the [Omlet API](https://smart.omlet.com/developers/api#/). It fetches device states, performs actions, and listens for updates.
@@ -74,12 +51,6 @@ This integration uses the [Omlet API](https://smart.omlet.com/developers/api#/).
 Key API endpoints used:
 - `/device` - Retrieve device information.
 - `/device/{id}/action/{action}` - Trigger device actions.
-
-## Known Issues
-
-- Some devices may have limited functionality depending on the Omlet API.
-
-## Contribution
 
 ## License
 
@@ -89,9 +60,11 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 If you encounter any issues or have questions, feel free to:
 - Open an [issue](https://github.com/krozgrov/ha-omlet-integration/issues).
-- Join the Home Assistant community for support.
 
-## Future Enhancements
+For bug reports, include the debug log, which can be enabled in configuration YAML + restart:
 
-- Webhook integration for real-time updates.
-- Enhanced diagnostics and error handling.
+```YAML
+logger:
+  default: warning
+  logs:
+    custom_components.omlet: debug
