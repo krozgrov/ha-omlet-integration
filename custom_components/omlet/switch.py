@@ -1,139 +1,106 @@
+from homeassistant.components.cover import CoverEntity
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import (
-    DOMAIN,
-    API_BASE_URL,
-    CONF_API_KEY,
-    DOOR_ACTION_OPEN,
-    DOOR_ACTION_CLOSE,
-    STATE_DOOR_OPEN,
-    STATE_DOOR_CLOSED,
-)
-import aiohttp
+from .const import DOMAIN
+from .coordinator import OmletDataCoordinator
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
-    """Set up Omlet Smart Coop switches."""
-    api_key = entry.data.get(CONF_API_KEY)
-    if not api_key:
-        _LOGGER.error("API key not found in config entry")
-        return
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            headers = {"Authorization": f"Bearer {api_key}"}
-            async with session.get(
-                f"{API_BASE_URL}/device", headers=headers, timeout=10
-            ) as response:
-                if response.status != 200:
-                    _LOGGER.error(f"Failed to fetch devices: {response.status}")
-                    return
-                devices = await response.json()
-    except Exception as e:
-        _LOGGER.error(f"Error fetching devices: {e}")
-        return
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
+):
+    """Set up switches and covers for the Omlet Smart Coop."""
+    coordinator: OmletDataCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
     entities = []
-    for device in devices:
-        ## OmletLight
-        # Add light switch if light state is available
-        if "light" in device["state"]:
-            entities.append(OmletLightSwitch(device, api_key))
-        ## OmletDoor
-        # Add door switch if door state is available
-        if "door" in device["state"]:
-            entities.append(OmletDoorSwitch(device, api_key))
+    _LOGGER.debug("Coordinator data for switches: %s", coordinator.data)
+
+    for device in coordinator.data:
+        device_id = device.get("deviceId")
+        device_name = device.get("name", "Unknown Device")
+
+        # Add light switch
+        if "light" in device.get("state", {}):
+            entities.append(
+                OmletLightSwitch(coordinator, device_id, device_name, device)
+            )
+
+        # Add door cover
+        if "door" in device.get("state", {}):
+            entities.append(OmletDoorCover(coordinator, device_id, device_name, device))
 
     async_add_entities(entities)
 
 
-## OmletLight
 class OmletLightSwitch(SwitchEntity):
-    """Representation of a light switch for Omlet Smart Coop."""
+    """Representation of the Omlet light switch."""
 
-    def __init__(self, device, api_key):
+    def __init__(self, coordinator, device_id, device_name, device):
+        self.coordinator = coordinator
+        self._device_id = device_id
+        self._device_name = device_name
         self._device = device
-        self._api_key = api_key
-        self._attr_name = f"{device['name']} Light"
-        self._attr_unique_id = f"{device['deviceId']}_light"
-        self._attr_is_on = device["state"]["light"]["state"] == "on"
+        self._attr_name = f"{device_name} Light"
+        self._attr_unique_id = f"{device_id}_light"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device_id)},
+            "name": device_name,
+        }
 
     @property
     def is_on(self):
-        """Return true if the light is on."""
-        return self._attr_is_on
+        """Return the state of the light."""
+        return self._device["state"]["light"]["state"] == "on"
 
     async def async_turn_on(self, **kwargs):
         """Turn the light on."""
-        await self._send_action("on")
+        await self.coordinator.perform_action(self._device_id, "on")
+        self.async_write_ha_state()
 
     async def async_turn_off(self, **kwargs):
         """Turn the light off."""
-        await self._send_action("off")
+        await self.coordinator.perform_action(self._device_id, "off")
+        self.async_write_ha_state()
 
-    async def _send_action(self, action):
-        """Send an action to the API."""
-        try:
-            async with aiohttp.ClientSession() as session:
-                headers = {"Authorization": f"Bearer {self._api_key}"}
-                async with session.post(
-                    f"{API_BASE_URL}/device/{self._device['deviceId']}/action/{action}",
-                    headers=headers,
-                    timeout=10,
-                ) as response:
-                    if response.status != 200:
-                        _LOGGER.error(
-                            f"Failed to send light action {action}: {response.status}"
-                        )
-                    else:
-                        self._attr_is_on = action == "on"
-        except Exception as e:
-            _LOGGER.error(f"Error sending light action {action}: {e}")
+    async def async_update(self):
+        """Request an update from the coordinator."""
+        await self.coordinator.async_request_refresh()
 
 
-## OmletDoor
-class OmletDoorSwitch(SwitchEntity):
-    """Representation of a door switch for Omlet Smart Coop."""
+class OmletDoorCover(CoverEntity):
+    """Representation of the automatic chicken door."""
 
-    def __init__(self, device, api_key):
+    def __init__(self, coordinator, device_id, device_name, device):
+        """Initialize the door cover."""
+        self.coordinator = coordinator
+        self._device_id = device_id
+        self._device_name = device_name
         self._device = device
-        self._api_key = api_key
-        self._attr_name = f"{device['name']} Door"
-        self._attr_unique_id = f"{device['deviceId']}_door"
-        self._attr_is_on = device["state"]["door"]["state"] == STATE_DOOR_OPEN
+        self._attr_name = f"{device_name} Door"
+        self._attr_unique_id = f"{device_id}_door"
+        self._attr_device_info = {
+            "identifiers": {(DOMAIN, device_id)},
+            "name": device_name,
+        }
 
     @property
-    def is_on(self):
-        """Return true if the door is open."""
-        return self._attr_is_on
+    def is_closed(self) -> bool:
+        """Return if the door is closed."""
+        return self._device["state"]["door"]["state"] == "closed"
 
-    async def async_turn_on(self, **kwargs):
+    async def async_open_cover(self, **kwargs):
         """Open the door."""
-        await self._send_action(DOOR_ACTION_OPEN)
+        await self.coordinator.perform_action(self._device_id, "open")
+        self.async_write_ha_state()
 
-    async def async_turn_off(self, **kwargs):
+    async def async_close_cover(self, **kwargs):
         """Close the door."""
-        await self._send_action(DOOR_ACTION_CLOSE)
+        await self.coordinator.perform_action(self._device_id, "close")
+        self.async_write_ha_state()
 
-    async def _send_action(self, action):
-        """Send an action to the API."""
-        try:
-            async with aiohttp.ClientSession() as session:
-                headers = {"Authorization": f"Bearer {self._api_key}"}
-                async with session.post(
-                    f"{API_BASE_URL}/device/{self._device['deviceId']}/action/{action}",
-                    headers=headers,
-                    timeout=10,
-                ) as response:
-                    if response.status != 200:
-                        _LOGGER.error(
-                            f"Failed to send door action {action}: {response.status}"
-                        )
-                    else:
-                        self._attr_is_on = action == DOOR_ACTION_OPEN
-        except Exception as e:
-            _LOGGER.error(f"Error sending door action {action}: {e}")
+    async def async_update(self):
+        """Request an update from the coordinator."""
+        await self.coordinator.async_request_refresh()

@@ -1,41 +1,101 @@
 from homeassistant import config_entries
-from aiohttp import ClientSession
-from .const import DOMAIN, CONF_API_KEY, API_BASE_URL
+from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
+from .const import DOMAIN, CONF_API_KEY
+from .api_client import OmletApiClient
+
+
+class CannotConnect(HomeAssistantError):
+    """Error to indicate we cannot connect."""
+
+
+class InvalidAuth(HomeAssistantError):
+    """Error to indicate invalid authentication."""
 
 
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
-    """Handle a config flow for Omlet integration."""
+    """Handle the config flow for Omlet Smart Coop."""
 
     VERSION = 1
 
-    async def async_step_user(self, user_input: dict | None = None):
-        """Handle the initial step."""
+    async def async_step_user(self, user_input=None):
+        """Handle the user step."""
         errors = {}
-
         if user_input is not None:
-            api_key = user_input[CONF_API_KEY]
-
             try:
-                # Validate the API key with a test request
-                async with ClientSession() as session:
-                    headers = {"Authorization": f"Bearer {api_key}"}
-                    async with session.get(
-                        f"{API_BASE_URL}/whoami", headers=headers, timeout=10
-                    ) as resp:
-                        if resp.status == 200:
-                            return self.async_create_entry(
-                                title="Omlet Smart Coop",
-                                data={CONF_API_KEY: api_key},
-                            )
-                        errors["base"] = "invalid_auth"
-
-            except Exception as e:
-                self.hass.logger.error(f"Error during API validation: {e}")
+                await self._validate_input(user_input)
+            except CannotConnect:
                 errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except Exception:
+                errors["base"] = "unknown"
+            else:
+                # Set unique ID and abort if already configured
+                await self.async_set_unique_id("omlet_coop")
+                self._abort_if_unique_id_configured()
+
+                # Create the configuration entry
+                return self.async_create_entry(
+                    title="Omlet Smart Coop",
+                    data=user_input,
+                )
 
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema({vol.Required(CONF_API_KEY): str}),
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): str,
+                }
+            ),
             errors=errors,
         )
+
+    async def async_step_reauth(self, entry_data):
+        """Handle reauthentication."""
+        self.reauth_entry = entry_data
+        await self.async_set_unique_id("omlet_coop")
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input=None):
+        """Handle reauthentication confirmation."""
+        errors = {}
+        if user_input is not None:
+            try:
+                await self._validate_input(user_input)
+            except CannotConnect:
+                errors["base"] = "cannot_connect"
+            except InvalidAuth:
+                errors["base"] = "invalid_auth"
+            except Exception:
+                errors["base"] = "unknown"
+            else:
+                # Update entry with new API key
+                self.hass.config_entries.async_update_entry(
+                    self.reauth_entry,
+                    data={
+                        **self.reauth_entry.data,
+                        CONF_API_KEY: user_input[CONF_API_KEY],
+                    },
+                )
+                await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
+                return self.async_abort(reason="reauth_successful")
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_API_KEY): str,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def _validate_input(self, data):
+        """Validate the user input."""
+        api_key = data[CONF_API_KEY]
+
+        # Use the API client to validate
+        client = OmletApiClient(api_key=api_key)  # No host needed
+        if not await client.is_valid():
+            raise InvalidAuth

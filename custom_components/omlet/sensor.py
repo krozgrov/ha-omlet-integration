@@ -1,122 +1,140 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers.device_registry import DeviceEntryType
-from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from .const import DOMAIN, API_BASE_URL, CONF_API_KEY
-import aiohttp
+from .const import DOMAIN, ATTR_BATTERY_LEVEL
+from .coordinator import OmletDataCoordinator
 import logging
 
 _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
-    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ):
     """Set up sensors for the Omlet Smart Coop."""
-    api_key = entry.data.get(CONF_API_KEY)  # Retrieve API key from entry data
-    if not api_key:
-        _LOGGER.error("API key not found in config entry")
-        return
+    coordinator: OmletDataCoordinator = hass.data[DOMAIN][entry.entry_id]["coordinator"]
 
-    # Fetch devices from the API
-    try:
-        async with aiohttp.ClientSession() as session:
-            headers = {"Authorization": f"Bearer {api_key}"}
-            async with session.get(
-                f"{API_BASE_URL}/device", headers=headers, timeout=10
-            ) as response:
-                if response.status != 200:
-                    _LOGGER.error(f"Failed to fetch devices: {response.status}")
-                    return
-                devices = await response.json()
-    except Exception as e:
-        _LOGGER.error(f"Error fetching devices from API: {e}")
-        return
-
-    # Create sensors for each device
     sensors = []
-    for device in devices:
-        # Debug the device state for clarity
-        _LOGGER.debug(f"Device data: {device}")
+    _LOGGER.debug("Coordinator data: %s", coordinator.data)
 
-        # Check for a valid battery level in the response
-        battery_level = device.get("state", {}).get("general", {}).get("batteryLevel")
-        if battery_level is not None:
-            sensors.append(
-                OmletBatterySensor(
-                    device=device, api_key=api_key, config_entry_id=entry.entry_id
-                )
+    for device in coordinator.data:
+        device_id = device.get("deviceId")
+        device_name = device.get("name", "Unknown Device")
+        manufacturer = "Omlet"
+        model = device.get("deviceType", "Unknown Model")
+
+        # Add sensors for battery, WiFi signal strength, and firmware version
+        sensors.append(
+            OmletSensor(
+                coordinator,
+                device_id,
+                device,
+                "batteryLevel",
+                f"{device_name} Battery Level",
+                "%",
+                manufacturer,
+                model,
+                ATTR_BATTERY_LEVEL,
             )
-        else:
-            _LOGGER.warning(
-                f"Device {device['name']} does not have a valid battery level."
+        )
+        sensors.append(
+            OmletSensor(
+                coordinator,
+                device_id,
+                device,
+                "wifiStrength",
+                f"{device_name} WiFi Signal Strength",
+                "dBm",
+                manufacturer,
+                model,
             )
+        )
+        sensors.append(
+            OmletSensor(
+                coordinator,
+                device_id,
+                device,
+                "firmwareVersionCurrent",
+                f"{device_name} Firmware Version",
+                None,
+                manufacturer,
+                model,
+            )
+        )
+
     async_add_entities(sensors)
 
 
-class OmletBatterySensor(SensorEntity):
-    """A battery level sensor for the Omlet Smart Coop."""
+class OmletSensor(SensorEntity):
+    """Representation of an Omlet sensor."""
 
-    def __init__(self, device, api_key, config_entry_id):
-        self._device = device
-        self._api_key = api_key
-        self._config_entry_id = config_entry_id
-
-        # Entity-specific attributes
-        self._attr_name = f"{device['name']} Battery"
-        self._attr_unique_id = f"{device['deviceId']}_battery"
-        self._attr_native_unit_of_measurement = "%"
-        self._attr_device_class = "battery"
-        self._attr_entity_category = EntityCategory.DIAGNOSTIC
-
-        # Device linking
+    def __init__(
+        self,
+        coordinator,
+        device_id,
+        device_data,
+        key,
+        name,
+        unit,
+        manufacturer,
+        model,
+        battery_key=None,
+    ):
+        """Initialize the sensor."""
+        self.coordinator = coordinator
+        self._device_id = device_id
+        self._device_data = device_data
+        self._key = key
+        self._attr_name = name
+        self._attr_unique_id = f"{device_id}_{key}"
+        self._attr_native_unit_of_measurement = unit
+        self._battery_key = battery_key  # Specific to battery level sensors
         self._attr_device_info = {
-            "identifiers": {(DOMAIN, device["deviceId"])},
-            "name": device["name"],
-            "manufacturer": "Omlet",
-            "model": device["deviceType"],
-            "entry_type": DeviceEntryType.SERVICE,
+            "identifiers": {(DOMAIN, device_id)},
+            "name": device_data.get("name", "Unknown Device"),
+            "manufacturer": manufacturer,
+            "model": model,
         }
-
-        # Set initial state
-        self._attr_state = device["state"]["general"].get("batteryLevel", "unknown")
-        _LOGGER.debug(f"Initialized {self._attr_name} with state: {self._attr_state}")
+        if battery_key:  # Include battery capability in device info if applicable
+            self._attr_device_info["capabilities"] = {
+                "battery_level": self.native_value
+            }
 
     @property
     def native_value(self):
-        """Return the current battery level."""
-        return self._attr_state
+        """Return the current value of the sensor."""
+        try:
+            # Debug log to verify the coordinator data structure
+            _LOGGER.debug(
+                "Sensor [%s]: Coordinator data: %s", self._key, self.coordinator.data
+            )
+
+            # Locate device in data
+            device_data = next(
+                (
+                    d
+                    for d in self.coordinator.data
+                    if d.get("deviceId") == self._device_id
+                ),
+                None,
+            )
+
+            if device_data:
+                # Handle general and connectivity state separately
+                if self._key == "wifiStrength":
+                    return (
+                        device_data.get("state", {})
+                        .get("connectivity", {})
+                        .get("wifiStrength")
+                    )
+                return device_data.get("state", {}).get("general", {}).get(self._key)
+
+            _LOGGER.error("Device %s not found in coordinator data", self._device_id)
+            return None
+        except Exception as e:
+            _LOGGER.error("Error retrieving data for sensor %s: %s", self._key, e)
+            return None
 
     async def async_update(self):
-        """Fetch updated data for the sensor."""
-        try:
-            async with aiohttp.ClientSession() as session:
-                headers = {"Authorization": f"Bearer {self._api_key}"}
-                async with session.get(
-                    f"{API_BASE_URL}/device/{self._device['deviceId']}",
-                    headers=headers,
-                    timeout=10,
-                ) as response:
-                    if response.status != 200:
-                        _LOGGER.error(
-                            f"Failed to fetch device state: {response.status}"
-                        )
-                        return
-
-                    # Parse the device data
-                    device_data = await response.json()
-                    _LOGGER.debug(f"Fetched device data: {device_data}")
-
-                    # Update battery level state
-                    self._attr_state = (
-                        device_data.get("state", {})
-                        .get("general", {})
-                        .get("batteryLevel", "unknown")
-                    )
-                    _LOGGER.debug(
-                        f"Updated {self._attr_name} battery level to: {self._attr_state}"
-                    )
-        except Exception as e:
-            _LOGGER.error(f"Error updating sensor {self._attr_name}: {e}")
+        """Request an update from the coordinator."""
+        await self.coordinator.async_request_refresh()

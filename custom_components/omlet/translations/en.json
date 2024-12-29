@@ -1,12 +1,40 @@
 {
-  "domain": "omlet_smart_coop",
-  "name": "Omlet Smart Coop",
-  "codeowners": ["@krozgrov"],
-  "config_flow": true,
-  "dependencies": [],
-  "documentation": "https://github.com/krozgrov/ha-omlet-integration",
-  "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/krozgrov/ha-omlet-integration/issues",
-  "requirements": ["aiohttp>=3.8.1"],
-  "version": "1.0.1"
+  "title": "Omlet Smart Coop",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Omlet Smart Coop",
+        "description": "Enter your Omlet API key to connect to the Omlet Smart Coop service.",
+        "data": {
+          "api_key": "API Key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the Omlet API. Please check your API key.",
+      "unknown": "An unknown error occurred. Please try again later."
+    },
+    "abort": {
+      "already_configured": "This API key is already configured."
+    }
+  },
+  "device_automation": {
+    "action_type": {
+      "open_door": "Open the coop door",
+      "close_door": "Close the coop door",
+      "turn_light_on": "Turn the light on",
+      "turn_light_off": "Turn the light off"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "battery_level": "Battery Level",
+      "wifi_signal_strength": "WiFi Signal Strength",
+      "firmware_version": "Firmware Version"
+    },
+    "switch": {
+      "light": "Light",
+      "door": "Door"
+    }
+  }
 }
