@@ -12,7 +12,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = OmletDataCoordinator(
         hass,
         entry.data["api_key"],
-        timedelta(seconds=entry.options.get("polling_interval", 300)),
+        entry.options.get("polling_interval", 300),
     )
     await coordinator.async_config_entry_first_refresh()
 
