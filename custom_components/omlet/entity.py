@@ -1,31 +1,32 @@
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.helpers.entity import EntityCategory
-from .coordinator import OmletDataCoordinator
 from .const import DOMAIN
 
 
-class OmletBaseEntity(CoordinatorEntity):
-    """Base entity for Omlet integration."""
+class OmletEntity(CoordinatorEntity):
+    """Base class for Omlet entities."""
 
-    _attr_has_entity_name = True
-
-    def __init__(self, coordinator: OmletDataCoordinator, device: dict):
-        """Initialize the base entity."""
+    def __init__(self, coordinator, device_id):
+        """Initialize the entity."""
         super().__init__(coordinator)
-        self.device = device
-        self.device_id = device["deviceId"]
-        self.device_name = device["name"]
+        self.device_id = device_id
+        device_data = coordinator.data[device_id]
 
-        # Define device info for linking in Home Assistant
-        self._attr_device_info = {
-            "identifiers": {(DOMAIN, self.device_id)},
-            "name": self.device_name,
-            "manufacturer": "Omlet",
-            "model": device.get("deviceType", "Smart Coop"),
-        }
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, self.device_id)},
+            name=device_data["name"],
+            manufacturer="Omlet",
+            model="Autodoor",
+            sw_version=device_data.get(
+                "firmware_version", "Unknown"
+            ),  # Dynamically linked firmware
+        )
 
     @property
-    def available(self):
-        """Return True if entity is available."""
-        # Use coordinator availability and ensure data exists for this device
-        return super().available and self.device_id in self.coordinator.data
+    def device_info(self):
+        """Return updated device info."""
+        device_data = self.coordinator.data[self.device_id]
+        self._attr_device_info["sw_version"] = device_data.get(
+            "firmware_version", "Unknown"
+        )
+        return self._attr_device_info
