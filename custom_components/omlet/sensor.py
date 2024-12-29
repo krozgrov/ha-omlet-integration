@@ -1,11 +1,12 @@
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from .const import DOMAIN
+from .const import DOMAIN, ATTR_BATTERY_LEVEL
 from .coordinator import OmletDataCoordinator
 import logging
 
 _LOGGER = logging.getLogger(__name__)
+
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities):
     """Set up sensors for the Omlet Smart Coop."""
@@ -20,9 +21,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
         manufacturer = "Omlet"
         model = device.get("deviceType", "Unknown Model")
 
-        sensors.append(OmletSensor(coordinator, device_id, device, "batteryLevel", f"{device_name} Battery Level", "%", manufacturer, model))
-        sensors.append(OmletSensor(coordinator, device_id, device, "wifiStrength", f"{device_name} WiFi Signal Strength", "dBm", manufacturer, model))
-        sensors.append(OmletSensor(coordinator, device_id, device, "firmwareVersionCurrent", f"{device_name} Firmware Version", None, manufacturer, model))
+        sensors.append(OmletSensor(coordinator, device_id, device, "batteryLevel", f"{device_name} Battery Level", "%", manufacturer, model, True))
+        sensors.append(OmletSensor(coordinator, device_id, device, "wifiStrength", f"{device_name} WiFi Signal Strength", "dBm", manufacturer, model, False))
+        sensors.append(OmletSensor(coordinator, device_id, device, "firmwareVersionCurrent", f"{device_name} Firmware Version", None, manufacturer, model, False))
 
     async_add_entities(sensors)
 
@@ -30,7 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 class OmletSensor(SensorEntity):
     """Representation of an Omlet sensor."""
 
-    def __init__(self, coordinator, device_id, device_data, key, name, unit, manufacturer, model):
+    def __init__(self, coordinator, device_id, device_data, key, name, unit, manufacturer, model, is_battery):
         """Initialize the sensor."""
         self.coordinator = coordinator
         self._device_id = device_id
@@ -39,12 +40,18 @@ class OmletSensor(SensorEntity):
         self._attr_name = name
         self._attr_unique_id = f"{device_id}_{key}"
         self._attr_native_unit_of_measurement = unit
+        self._is_battery = is_battery
+
+        # Include battery_level in device_info if this is the battery sensor
         self._attr_device_info = {
             "identifiers": {(DOMAIN, device_id)},
             "name": device_data.get("name", "Unknown Device"),
             "manufacturer": manufacturer,
             "model": model,
         }
+        if self._is_battery:
+            self._attr_device_info["via_device"] = f"{device_data.get('deviceId')}"
+            self._attr_device_info["capabilities"] = {"battery_level": self.native_value}
 
     @property
     def native_value(self):
