@@ -20,6 +20,8 @@ A lot of effort is going into that integration. So if you can afford it and want
   - Open/close the door.
   - Turn lights on/off.
   <img width="804" alt="Screenshot 2024-12-29 at 3 47 54 PM" src="https://github.com/user-attachments/assets/76ad0dac-3198-4cbc-beb4-4022b8c24e25" />
+  <img width="414" alt="Screenshot 2024-12-29 at 4 29 21 PM" src="https://github.com/user-attachments/assets/6977606f-8a54-491c-8a00-efdff07e8cff" />
+
 
 ## Installation
 
@@ -42,7 +44,9 @@ A lot of effort is going into that integration. So if you can afford it and want
 1. Navigate to **Settings > Devices & Services > Add Integration**.
 2. Search for **Omlet Integration**.
 3. Enter your API key.
+<img width="794" alt="Screenshot 2024-12-29 at 4 28 08 PM" src="https://github.com/user-attachments/assets/a4181ca6-4ab3-45e5-b6bf-bcdd2f203d1e" />
 4. Devices will be automatically discovered and added.
+<img width="794" alt="Screenshot 2024-12-29 at 4 28 36 PM" src="https://github.com/user-attachments/assets/371c9547-eb1d-4569-911a-b65d358fb1b7" />
 
 ## API Details
 
