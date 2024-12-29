@@ -1,20 +1,18 @@
 
-# Home Assistant - Omlet Integration
+# Omlet Smart Automatic Chicken Coop Door - Home Assistant Integration
 
-A **custom integration for Home Assistant** that connects your Omlet Smart Coop and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Offical API.
+A **custom integration for Home Assistant** that connects your Omlet Smart Automatic Chicken Coop Door and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Offical API.
 
 ## Features
 
-- **Device Support:** Automatically detect and add supported Omlet devices like the Smart Autodoor.
+- **Device Support:** Automatically detects and adds supported Omlet device - Smart Automatic Chicken Coop Door.
 - **Entity Creation:**
   - Monitor battery levels, Wi-Fi signal strength, and device uptime.
   - Control and monitor the door state (`open`, `closed`) and light state (`on`, `off`).
 - **Actions:** Trigger actions such as:
   - Open/close the door.
   - Turn lights on/off.
-  - Perform device restarts and firmware updates.
 - **Real-Time Updates:**
-  - Optional webhook support for live state updates.
   - Configurable polling intervals to conserve battery life.
 
 ## Installation
@@ -72,17 +70,9 @@ Key API endpoints used:
 
 ## Known Issues
 
-- Webhook support is planned for a future update.
 - Some devices may have limited functionality depending on the Omlet API.
 
 ## Contribution
-
-Contributions are welcome! Please follow these steps:
-1. Fork the repository.
-2. Create a feature branch (`git checkout -b feature-name`).
-3. Commit your changes (`git commit -m 'Add feature'`).
-4. Push to the branch (`git push origin feature-name`).
-5. Open a pull request.
 
 ## License
 
