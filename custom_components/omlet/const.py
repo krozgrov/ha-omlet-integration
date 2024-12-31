@@ -15,8 +15,8 @@ DEVICE_TYPES = {
 }
 
 # Default configurations
-DEFAULT_POLLING_INTERVAL = 60  # Polling interval in seconds
-DEFAULT_RETRY_COUNT = 3  # Default number of retries for API calls
+# DEFAULT_POLLING_INTERVAL = 60  # Polling interval in seconds - Not used
+# DEFAULT_RETRY_COUNT = 3  # Default number of retries for API calls - Not used
 
 # Entity attribute keys
 ATTR_DOOR_STATE = "door_state"  # e.g., "open" or "closed"
@@ -40,19 +40,20 @@ LIGHT_ACTION_OFF = "off"
 
 # Configuration keys
 CONF_API_KEY = "api_key"
-CONF_HOST = "host"
-CONF_TIMEZONE = "timezone"
-CONF_USE_DST = "use_dst"  # Daylight Saving Time
-CONF_UPDATE_FREQUENCY = "update_frequency"  # Firmware check interval in seconds
-CONF_LANGUAGE = "language"
-CONF_OVERNIGHT_SLEEP_ENABLE = "overnight_sleep_enable"
-CONF_OVERNIGHT_SLEEP_START = "overnight_sleep_start"
-CONF_OVERNIGHT_SLEEP_END = "overnight_sleep_end"
 CONF_REFRESH_INTERVAL = "refresh_interval"  # Polling interval for coordinator
+# CONF_HOST = "host" - Not used
+# CONF_TIMEZONE = "timezone" - Not used
+# CONF_USE_DST = "use_dst"  # Daylight Saving Time - Not used
+# CONF_UPDATE_FREQUENCY = "update_frequency"  # Firmware check interval in seconds - Not used
+# CONF_LANGUAGE = "language" - Not used
+# CONF_OVERNIGHT_SLEEP_ENABLE = "overnight_sleep_enable" - Not used
+# CONF_OVERNIGHT_SLEEP_START = "overnight_sleep_start" - Not used
+# CONF_OVERNIGHT_SLEEP_END = "overnight_sleep_end" - Not used
+
 
 # Connectivity configuration keys
-CONF_BLUETOOTH_STATE = "bluetooth_state"
-CONF_WIFI_STATE = "wifi_state"
+# CONF_BLUETOOTH_STATE = "bluetooth_state" - Not used
+# CONF_WIFI_STATE = "wifi_state" - Not used
 
 # Door configuration keys
 CONF_DOOR_TYPE = "door_type"  # e.g., 'sliding' or 'rotary'
