@@ -1,7 +1,7 @@
 from homeassistant import config_entries
 from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
-from .const import DOMAIN, CONF_API_KEY, CONF_REFRESH_INTERVAL
+from .const import DOMAIN, CONF_API_KEY, CONF_POLLING_INTERVAL, CONF_DEFAULT_POLLING_INTERVAL
 from .api_client import OmletApiClient
 
 
@@ -47,7 +47,7 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY): str,
-                    vol.Optional (CONF_REFRESH_INTERVAL, default=300): int,
+                    vol.Optional (CONF_POLLING_INTERVAL, default=CONF_DEFAULT_POLLING_INTERVAL): int,
                 }
             ),
             errors=errors,
@@ -78,19 +78,19 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     data={
                         **self.reauth_entry.data,
                         CONF_API_KEY: user_input[CONF_API_KEY],
-                        CONF_REFRESH_INTERVAL: user_input.get(CONF_REFRESH_INTERVAL, 300),
+                        CONF_POLLING_INTERVAL: user_input.get(CONF_DEFAULT_POLLING_INTERVAL),
                     },
                 )
                 await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
                 return self.async_abort(reason="reauth_successful")
         
-        current_interval = self.reauth_entry.get(CONF_REFRESH_INTERVAL, 300)
+        current_interval = self.reauth_entry.get(CONF_DEFAULT_POLLING_INTERVAL)
         return self.async_show_form(
             step_id="reauth_confirm",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY): str,
-                    vol.Optional(CONF_REFRESH_INTERVAL, default=current_interval): int,
+                    vol.Optional(CONF_POLLING_INTERVAL, default=current_interval): int,
                 }
             ),
             errors=errors,

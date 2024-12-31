@@ -14,8 +14,31 @@ DEVICE_TYPES = {
     "LIGHT": "Light",  # Coop light
 }
 
-# Default configurations
-# DEFAULT_POLLING_INTERVAL = 60  # Polling interval in seconds - Not used
+# API-specific constants
+API_BASE_URL = "https://x107.omlet.co.uk/api/v1"
+API_ENDPOINT_DEVICES = "/device"
+API_ENDPOINT_DEVICE_ACTION = "/device/{deviceId}/action/{action}"
+API_ENDPOINT_DEVICE_CONFIG = "/device/{deviceId}/configuration"
+API_ENDPOINT_WHOAMI = "/whoami"
+API_RETRY_COUNT = 3  # Number of retries for API calls
+API_TIMEOUT = 10  # Timeout for API requests in seconds
+
+# Additional constants for reauthentication flow
+SERVICE_REAUTH = "reauthenticate"
+
+# Configuration keys
+CONF_API_KEY = "api_key"
+CONF_POLLING_INTERVAL = "polling_interval"  # API Polling Interval
+CONF_DEFAULT_POLLING_INTERVAL = 300  # Polling interval in seconds
+# CONF_HOST = "host" - Not used
+# CONF_TIMEZONE = "timezone" - Not used
+# CONF_USE_DST = "use_dst"  # Daylight Saving Time - Not used
+# CONF_UPDATE_FREQUENCY = "update_frequency"  # Firmware check interval in seconds - Not used
+# CONF_LANGUAGE = "language" - Not used
+# CONF_OVERNIGHT_SLEEP_ENABLE = "overnight_sleep_enable" - Not used
+# CONF_OVERNIGHT_SLEEP_START = "overnight_sleep_start" - Not used
+# CONF_OVERNIGHT_SLEEP_END = "overnight_sleep_end" - Not used
+
 # DEFAULT_RETRY_COUNT = 3  # Default number of retries for API calls - Not used
 
 # Entity attribute keys
@@ -38,17 +61,7 @@ DOOR_ACTION_CLOSE = "close"
 LIGHT_ACTION_ON = "on"
 LIGHT_ACTION_OFF = "off"
 
-# Configuration keys
-CONF_API_KEY = "api_key"
-CONF_REFRESH_INTERVAL = "refresh_interval"  # Polling interval for coordinator
-# CONF_HOST = "host" - Not used
-# CONF_TIMEZONE = "timezone" - Not used
-# CONF_USE_DST = "use_dst"  # Daylight Saving Time - Not used
-# CONF_UPDATE_FREQUENCY = "update_frequency"  # Firmware check interval in seconds - Not used
-# CONF_LANGUAGE = "language" - Not used
-# CONF_OVERNIGHT_SLEEP_ENABLE = "overnight_sleep_enable" - Not used
-# CONF_OVERNIGHT_SLEEP_START = "overnight_sleep_start" - Not used
-# CONF_OVERNIGHT_SLEEP_END = "overnight_sleep_end" - Not used
+
 
 
 # Connectivity configuration keys
@@ -100,15 +113,3 @@ TIMEZONE_EST = "-5"
 
 # Logging/debugging
 DEBUG_ENABLED = False  # Can be toggled for verbose logging
-
-# API-specific constants
-API_BASE_URL = "https://x107.omlet.co.uk/api/v1"
-API_ENDPOINT_DEVICES = "/device"
-API_ENDPOINT_DEVICE_ACTION = "/device/{deviceId}/action/{action}"
-API_ENDPOINT_DEVICE_CONFIG = "/device/{deviceId}/configuration"
-API_ENDPOINT_WHOAMI = "/whoami"
-API_RETRY_COUNT = 3  # Number of retries for API calls
-API_TIMEOUT = 10  # Timeout for API requests in seconds
-
-# Additional constants for reauthentication flow
-SERVICE_REAUTH = "reauthenticate"
