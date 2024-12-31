@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from .api_client import OmletApiClient
+from .const import CONF_POLLING_INTERVAL, CONF_DEFAULT_POLLING_INTERVAL, ERROR_FETCH_DEVICES, DEBUG_FETCH_DEVICES, DEBUG_DEVICE_STRUCTURE, DEBUG_PROCESSED_DEVICES
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -9,13 +10,14 @@ _LOGGER = logging.getLogger(__name__)
 class OmletDataCoordinator(DataUpdateCoordinator):
     # Coordinator for fetching and structuring data from the Omlet API.
 
-    def __init__(self, hass, api_key, update_interval_seconds):
+    def __init__(self, hass, api_key, config_entry):
         # Initialize the coordinator.
+        refresh_interval = config_entry.data.get(CONF_POLLING_INTERVAL, CONF_DEFAULT_POLLING_INTERVAL)
         super().__init__(
             hass,
             _LOGGER,
             name="OmletDataCoordinator",
-            update_interval=timedelta(seconds=update_interval_seconds),
+            update_interval=timedelta(seconds=refresh_interval),
         )
         self.api_key = api_key
         self.api_client = OmletApiClient(api_key)
@@ -185,9 +187,9 @@ class OmletDataCoordinator(DataUpdateCoordinator):
                 for device in devices_data
             }
 
-            _LOGGER.debug("Processed devices data: %s", self.devices)
+            _LOGGER.debug(DEBUG_PROCESSED_DEVICES, self.devices)
             return self.devices
 
         except Exception as err:
-            _LOGGER.error("Error updating data from Omlet API: %s", err)
+            _LOGGER.error(ERROR_FETCH_DEVICES, err)
             raise

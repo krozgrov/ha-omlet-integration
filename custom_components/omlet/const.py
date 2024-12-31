@@ -41,6 +41,12 @@ CONF_DEFAULT_POLLING_INTERVAL = 300  # Polling interval in seconds
 
 # DEFAULT_RETRY_COUNT = 3  # Default number of retries for API calls - Not used
 
+# Logging Messages 
+ERROR_FETCH_DEVICES = "Error updating data from Omlet API: %s"
+DEBUG_FETCH_DEVICES = "Fetching devices from Omlet API..."
+DEBUG_DEVICE_STRUCTURE = "First device structure: %s"
+DEBUG_PROCESSED_DEVICES = "Processed devices data: %s"
+
 # Entity attribute keys
 ATTR_DOOR_STATE = "door_state"  # e.g., "open" or "closed"
 ATTR_LIGHT_STATE = "light_state"  # e.g., "on" or "off"
