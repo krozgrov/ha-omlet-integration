@@ -15,7 +15,6 @@ close_door:
     entity:
       integration: omlet_smart_coop
 
-# Schedule Update Services
 update_overnight_sleep:
   name: Update Overnight Sleep Schedule
   description: Update the overnight sleep schedule settings
@@ -33,58 +32,87 @@ update_overnight_sleep:
     start_time:
       name: Sleep Start Time
       description: Time to start overnight sleep (format HH:MM)
-      required: true
-      example: "23:00"
+      required: false
+      example: "12:00"
       selector:
         time: {}
     end_time:
       name: Sleep End Time
       description: Time to end overnight sleep (format HH:MM)
-      required: true
-      example: "05:00"
+      required: false
+      example: "13:00"
       selector:
         time: {}
+    poll_mode:
+      name: Poll Frequency Mode
+      description: Select the polling frequency during overnight sleep
+      required: false
+      default: power_savings
+      selector:
+        select:
+          options:
+            - responsive
+            - power_savings
+          mode: dropdown
 
 update_door_schedule:
   name: Update Door Schedule
-  description: Update the automatic door open and close schedule
+  description: Update the automatic door schedule
   target:
     entity:
       integration: omlet_smart_coop
   fields:
-    open_mode:
-      name: Open Mode
-      description: Mode for door opening (time, light, or manual)
+    door_mode:
+      name: Door Mode
+      description: Mode for door operation (light, time, or manual)
       required: true
-      default: "time"
       selector:
         select:
           options:
-            - "time"
             - "light"
+            - "time"
             - "manual"
     open_time:
       name: Open Time
-      description: Time to open the door (format HH:MM) when in time mode
+      description: Time to open the door (format HH:MM) when in "time" mode
       required: false
-      example: "06:30"
       selector:
         time: {}
-    close_mode:
-      name: Close Mode
-      description: Mode for door closing (time, light, or manual)
-      required: true
-      default: "time"
-      selector:
-        select:
-          options:
-            - "time"
-            - "light"
-            - "manual"
     close_time:
       name: Close Time
-      description: Time to close the door (format HH:MM) when in time mode
+      description: Time to close the door (format HH:MM) when in "time" mode
       required: false
-      example: "20:30"
       selector:
         time: {}
+    open_light_level:
+      name: Open Light Level
+      description: Light level to open the door (only for "light" mode)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 99
+    close_light_level:
+      name: Close Light Level
+      description: Light level to close the door (only for "light" mode)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 99
+    open_delay:
+      name: Open Delay
+      description: Delay in minutes before opening the door (only for "light" mode)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 60
+    close_delay:
+      name: Close Delay
+      description: Delay in minutes before closing the door (only for "light" mode)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 60
