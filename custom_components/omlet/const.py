@@ -30,10 +30,18 @@ SERVICE_UPDATE_DOOR_SCHEDULE = "update_door_schedule"
 ATTR_ENABLED = "enabled"
 ATTR_START_TIME = "start_time"
 ATTR_END_TIME = "end_time"
-ATTR_OPEN_MODE = "open_mode"
-ATTR_CLOSE_MODE = "close_mode"
+ATTR_DOOR_MODE = "door_mode"
 ATTR_OPEN_TIME = "open_time"
 ATTR_CLOSE_TIME = "close_time"
+ATTR_OPEN_LIGHT_LEVEL = "open_light_level"
+ATTR_CLOSE_LIGHT_LEVEL = "close_light_level"
+ATTR_OPEN_DELAY = "open_delay"
+ATTR_CLOSE_DELAY = "close_delay"
+ATTR_POLL_MODE = "poll_mode"
+POLL_MODE_RESPONSIVE = "responsive"
+POLL_MODE_POWER_SAVINGS = "power_savings"
+POLL_FREQ_RESPONSIVE = 120
+POLL_FREQ_POWER_SAVINGS = 600
 
 # Valid Modes
 VALID_DOOR_MODES = ["time", "light", "manual"]
