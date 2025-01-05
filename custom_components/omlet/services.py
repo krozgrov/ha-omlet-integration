@@ -49,7 +49,7 @@ async def async_register_services(
             )
             door_config = current_config.get("door", {})
 
-            # Update only the changed fields
+            # Validate and set the door mode for both openMode and closeMode
             door_mode = call.data[ATTR_DOOR_MODE]
             if door_mode not in VALID_DOOR_MODES:
                 _LOGGER.error(
@@ -59,8 +59,11 @@ async def async_register_services(
                 )
                 return
 
+            # Apply the same door mode to both openMode and closeMode
             door_config["openMode"] = door_mode
+            door_config["closeMode"] = door_mode
 
+            # If the mode is "time", handle openTime and closeTime
             if door_mode == "time":
                 if ATTR_OPEN_TIME in call.data:
                     # Validate and format open time
@@ -75,7 +78,6 @@ async def async_register_services(
                             if len(open_time_parts) >= 2
                             else "00:00"
                         )
-
                     door_config["openTime"] = open_time
 
                 if ATTR_CLOSE_TIME in call.data:
@@ -91,9 +93,9 @@ async def async_register_services(
                             if len(close_time_parts) >= 2
                             else "00:00"
                         )
-
                     door_config["closeTime"] = close_time
 
+            # If the mode is "light", handle light-related fields
             elif door_mode == "light":
                 field_mapping = {
                     "open_light_level": "openLightLevel",
@@ -106,6 +108,7 @@ async def async_register_services(
                     if service_field in call.data:
                         door_config[api_field] = call.data[service_field]
 
+            # Send the updated configuration to the API
             response_data = await coordinator.api_client.patch_device_configuration(
                 device_id, {"door": door_config}
             )
@@ -117,6 +120,7 @@ async def async_register_services(
                     response_data,
                 )
 
+            # Refresh coordinator data
             await coordinator.async_request_refresh()
             _LOGGER.debug("Successfully updated door schedule for device %s", device_id)
 
