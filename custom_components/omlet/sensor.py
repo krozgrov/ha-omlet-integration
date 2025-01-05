@@ -54,6 +54,16 @@ SENSOR_TYPES = {
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:brightness-6",
     ),
+    "door_open_mode": SensorEntityDescription(
+        key="door_open_mode",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:door",
+    ),
+    "door_close_mode": SensorEntityDescription(
+        key="door_close_mode",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:door",
+    ),
     # Light Sensors
     "light_state": SensorEntityDescription(
         key="light_state",
@@ -181,6 +191,10 @@ def extract_sensor_value(sensor_key, device_data):
         return state.get("door", {}).get("fault")
     if sensor_key == "door_light_level":
         return state.get("door", {}).get("lightLevel")
+    if sensor_key == "door_open_mode":
+        return config.get("door", {}).get("openMode")
+    if sensor_key == "door_close_mode":
+        return config.get("door", {}).get("closeMode")
     if sensor_key == "light_state":
         return state.get("light", {}).get("state")
     if sensor_key == "light_mode":
