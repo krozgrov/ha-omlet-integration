@@ -45,6 +45,7 @@ A lot of effort is going into that integration. So if you can afford it and want
 2. Search for **Omlet Integration**.
 3. Enter your API key and polling interval.
 <img width="599" alt="Screenshot 2025-01-05 at 8 26 57 AM" src="https://github.com/user-attachments/assets/739eb66d-94af-430d-bf85-c28ba6825508" />
+
 4. Devices will be automatically discovered and added.
 <img width="794" alt="Screenshot 2024-12-29 at 4 28 36 PM" src="https://github.com/user-attachments/assets/371c9547-eb1d-4569-911a-b65d358fb1b7" />
 
