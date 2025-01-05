@@ -34,10 +34,12 @@ A lot of effort is going into that integration. So if you can afford it and want
 2. Extract the contents into the `custom_components/omlet` directory within your Home Assistant configuration folder.
 3. Restart Home Assistant.
 
-### Using HACS - In-progress
+### Using HACS
 1. Add this repository as a custom repository in HACS.
-2. Search for **Omlet Integration** and install it.
-3. Restart Home Assistant.
+2. Repository - https://github.com/krozgrov/ha-omlet-integration
+3. Type - Integration
+4. Search for **Omlet Integration** and select current Release and Download.
+5. Restart Home Assistant.
 
 ## Configuration
 
