@@ -4,6 +4,7 @@ from typing import Dict, Any, Set, List, Callable
 from dataclasses import dataclass, field
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .api_client import OmletApiClient
+from .const import MIN_POLLING_INTERVAL, MAX_POLLING_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -12,8 +13,8 @@ _LOGGER = logging.getLogger(__name__)
 class ValidationConfig:
     """Configuration class for validation settings."""
 
-    min_polling_interval: int = 60
-    max_polling_interval: int = 86400
+    min_polling_interval: int = MIN_POLLING_INTERVAL
+    max_polling_interval: int = MAX_POLLING_INTERVAL
     required_device_fields: Set[str] = field(default_factory=lambda: {"deviceId"})
     required_action_fields: Set[str] = field(
         default_factory=lambda: {"actionName", "description", "actionValue"}
@@ -72,6 +73,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         self.devices: Dict[str, Any] = {}
         self.config_entry = config_entry
         self.validation = ValidationConfig()
+        self._unsub_refresh = None
 
         # Validate and set the polling interval
         refresh_interval = self._validate_polling_interval(
@@ -273,4 +275,5 @@ class OmletDataCoordinator(DataUpdateCoordinator):
     async def async_shutdown(self) -> None:
         """Shut down the coordinator."""
         _LOGGER.info("Shutting down Omlet Data Coordinator")
-        self._unsub_refresh()
+        if self._unsub_refresh is not None:
+            self._unsub_refresh()
