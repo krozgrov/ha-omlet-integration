@@ -4,7 +4,7 @@
   "codeowners": ["@krozgrov"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/krozgrov/ha-omlet-integration",
+  "documentation": "https://github.com/krozgrov/ha-omlet-integration/blob/main/README.md",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/krozgrov/ha-omlet-integration/issues",
   "requirements": ["aiohttp>=3.8.1"],
