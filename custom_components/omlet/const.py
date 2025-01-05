@@ -1,4 +1,4 @@
-# Constants for Omlet Integration.
+# Constants for Omlet Integration. - 1/5/2024
 
 from homeassistant.const import Platform
 
