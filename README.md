@@ -21,6 +21,7 @@ A lot of effort is going into that integration. So if you can afford it and want
   - Turn lights on/off.
   <img width="804" alt="Screenshot 2024-12-29 at 3 47 54 PM" src="https://github.com/user-attachments/assets/76ad0dac-3198-4cbc-beb4-4022b8c24e25" />
   <img width="414" alt="Screenshot 2024-12-29 at 4 29 21 PM" src="https://github.com/user-attachments/assets/6977606f-8a54-491c-8a00-efdff07e8cff" />
+
   - Service Calls to access funcitionality - door open/close, update power settings, and door schedules.
 
 ## Installation
