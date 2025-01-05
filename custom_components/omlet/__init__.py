@@ -1,40 +1,33 @@
-from datetime import timedelta
-import logging
+from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
-
 from .coordinator import OmletDataCoordinator
+from .services import async_register_services, async_remove_services
 from .const import (
     DOMAIN,
     PLATFORMS,
     CONF_POLLING_INTERVAL,
     CONF_DEFAULT_POLLING_INTERVAL,
 )
+import logging
 
 _LOGGER = logging.getLogger(__name__)
 
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Omlet Smart Coop integration."""
+    hass.data.setdefault(DOMAIN, {})
+    return True
+
+
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Set up Omlet Smart Coop from a config entry.
-
-    Args:
-        hass: The Home Assistant instance
-        entry: The config entry to setup
-
-    Returns:
-        bool: True if setup was successful
-
-    Raises:
-        ConfigEntryNotReady: If setup fails
-    """
+    """Set up Omlet Smart Coop from a config entry."""
     _LOGGER.info(
         "Setting up Omlet Smart Coop integration for entry: %s", entry.entry_id
     )
-
-    # Ensure hass.data for DOMAIN is initialized
-    hass.data.setdefault(DOMAIN, {})
 
     # Initialize the data coordinator
     try:
@@ -51,6 +44,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Store the coordinator in hass.data
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
 
+    # Register services
+    try:
+        await async_register_services(hass, coordinator)
+        _LOGGER.debug("Successfully registered Omlet Smart Coop services")
+    except Exception as ex:
+        _LOGGER.error("Failed to register services: %s", ex)
+        return False
+
     # Forward the entry to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -61,37 +62,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """Unload a config entry.
-
-    Args:
-        hass: The Home Assistant instance
-        entry: The config entry to unload
-
-    Returns:
-        bool: True if unload was successful
-    """
+    """Unload a config entry."""
     _LOGGER.info("Unloading Omlet Smart Coop integration for entry: %s", entry.entry_id)
 
-    # Unload platforms
+    # Unload platforms first
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
-    # Remove stored data and clean up resources
     if unload_ok:
+        # Clean up coordinator
         entry_data = hass.data[DOMAIN].pop(entry.entry_id, {})
         coordinator = entry_data.get("coordinator")
         if coordinator:
             await coordinator.async_shutdown()
 
+        # Remove services last
+        async_remove_services(hass)
+
     return unload_ok
 
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
-    """Handle options updates.
-
-    Args:
-        hass: The Home Assistant instance
-        entry: The config entry being updated
-    """
+    """Handle options updates."""
     _LOGGER.info("Updating options for entry: %s", entry.entry_id)
 
     # Retrieve the coordinator

@@ -61,13 +61,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
     """Coordinator to handle Omlet data updates."""
 
     def __init__(self, hass, api_key: str, config_entry) -> None:
-        """Initialize the coordinator.
-
-        Args:
-            hass: Home Assistant instance
-            api_key: API key for Omlet API
-            config_entry: Configuration entry
-        """
+        """Initialize the coordinator."""
         self.api_key = api_key
         self.api_client = OmletApiClient(api_key)
         self.devices: Dict[str, Any] = {}
@@ -87,15 +81,24 @@ class OmletDataCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=refresh_interval),
         )
 
+    @property
+    def device_id(self) -> str:
+        """Get the first device ID from the devices dictionary."""
+        if not self.devices:
+            _LOGGER.error("No devices found in coordinator")
+            return None
+        return next(iter(self.devices.keys()))
+
+    @property
+    def first_device(self) -> Dict[str, Any]:
+        """Get the first device data from the devices dictionary."""
+        if not self.devices:
+            _LOGGER.error("No devices found in coordinator")
+            return {}
+        return next(iter(self.devices.values()))
+
     def _validate_polling_interval(self, interval: int) -> int:
-        """Validate and adjust polling interval if needed.
-
-        Args:
-            interval: Polling interval in seconds
-
-        Returns:
-            Validated polling interval
-        """
+        """Validate and adjust polling interval if needed."""
         if interval < self.validation.min_polling_interval:
             _LOGGER.warning(
                 "Polling interval too low, setting to minimum of %s seconds",
@@ -111,25 +114,14 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         return interval
 
     async def update_polling_interval(self, new_interval: int) -> None:
-        """Update the polling interval.
-
-        Args:
-            new_interval: New polling interval in seconds
-        """
+        """Update the polling interval."""
         validated_interval = self._validate_polling_interval(new_interval)
         self.update_interval = timedelta(seconds=validated_interval)
         _LOGGER.info("Polling interval updated to %s seconds", validated_interval)
         await self.async_request_refresh()
 
     async def _async_update_data(self) -> Dict[str, Any]:
-        """Fetch updated data from API.
-
-        Returns:
-            Dictionary of device data
-
-        Raises:
-            UpdateFailed: If there is an error fetching or parsing data
-        """
+        """Fetch updated data from API."""
         try:
             devices_data = await self.api_client.fetch_devices()
             self._validate_devices_data(devices_data)
@@ -148,28 +140,14 @@ class OmletDataCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(f"Error fetching devices: {str(err)}") from err
 
     def _validate_devices_data(self, data: Any) -> None:
-        """Validate the devices data received from the API.
-
-        Args:
-            data: Data to validate
-
-        Raises:
-            UpdateFailed: If data is invalid
-        """
+        """Validate the devices data received from the API."""
         if not data:
             raise UpdateFailed("No data received from API")
         if not isinstance(data, list):
             raise UpdateFailed(f"Invalid data format received: {type(data)}")
 
     def _is_valid_device(self, device: Dict[str, Any]) -> bool:
-        """Check if a device has all required fields.
-
-        Args:
-            device: Device data to validate
-
-        Returns:
-            True if device is valid, False otherwise
-        """
+        """Check if a device has all required fields."""
         missing_fields = [
             field
             for field in self.validation.required_device_fields
@@ -184,17 +162,9 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         return not missing_fields
 
     def _parse_device(self, device: Dict[str, Any]) -> Dict[str, Any]:
-        """Parse device data into standard format.
-
-        Args:
-            device: Raw device data
-
-        Returns:
-            Parsed device data
-        """
+        """Parse device data into standard format."""
         parser = DataParser()
 
-        # Get firmware version from state if available
         state = device.get("state", {})
         general_state = state.get("general", {})
         firmware = general_state.get("firmwareVersionCurrent", "Unknown")
@@ -216,14 +186,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         return parsed_device
 
     def _parse_device_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
-        """Parse device state data.
-
-        Args:
-            state: Raw state data
-
-        Returns:
-            Parsed state data
-        """
+        """Parse device state data."""
         parser = DataParser()
 
         general_fields = [
@@ -246,26 +209,12 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         }
 
     def _parse_device_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
-        """Parse device configuration data.
-
-        Args:
-            config: Raw configuration data
-
-        Returns:
-            Parsed configuration data
-        """
+        """Parse device configuration data."""
         config_fields = ["light", "door", "connectivity", "general"]
         return {key: config.get(key, {}) for key in config_fields}
 
     def _parse_device_actions(self, actions: list) -> list:
-        """Parse device actions.
-
-        Args:
-            actions: List of raw actions
-
-        Returns:
-            List of valid actions
-        """
+        """Parse device actions."""
         return [
             action
             for action in actions

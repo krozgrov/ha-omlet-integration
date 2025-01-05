@@ -19,7 +19,10 @@ class OmletApiClient:
             api_key: The API key for authentication
         """
         self.api_key = api_key
-        self._headers = {"Authorization": f"Bearer {self.api_key}"}
+        self._headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
         self._timeout = 10
 
     async def is_valid(self) -> bool:
@@ -79,7 +82,6 @@ class OmletApiClient:
             # Ensure action_url is treated as a path by removing any leading slash
             action_path = action_url.lstrip("/")
             full_url = f"{self.BASE_URL}/{action_path}"
-
             async with aiohttp.ClientSession() as session:
                 _LOGGER.debug("Executing action at URL: %s", full_url)
                 async with session.post(
@@ -95,6 +97,54 @@ class OmletApiClient:
                     return await response.json()
         except ClientError as err:
             _LOGGER.error("Error executing action %s: %s", action_url, err)
+            raise
+
+    async def patch_device_configuration(
+        self, device_id: str, configuration: dict
+    ) -> Optional[Dict[str, Any]]:
+        """Send a PATCH request to update the device configuration.
+
+        Args:
+            device_id: The device ID to update
+            configuration: The configuration data to patch
+
+        Returns:
+            Optional[Dict[str, Any]]: Response data if content is returned, None for 204 responses
+
+        Raises:
+            ClientError: If there's an error patching the configuration
+        """
+        try:
+            url = f"{self.BASE_URL}/device/{device_id}/configuration"
+            async with aiohttp.ClientSession() as session:
+                _LOGGER.debug(
+                    "Patching configuration at URL: %s with data: %s",
+                    url,
+                    configuration,
+                )
+                async with session.patch(
+                    url,
+                    json=configuration,
+                    headers=self._headers,
+                    timeout=self._timeout,
+                ) as response:
+                    response.raise_for_status()
+                    if response.status == 204:
+                        _LOGGER.debug(
+                            "Patch successful for device %s (no content)", device_id
+                        )
+                        return None
+
+                    response_data = await response.json()
+                    _LOGGER.debug(
+                        "Patch successful for device %s with response: %s",
+                        device_id,
+                        response_data,
+                    )
+                    return response_data
+
+        except ClientError as err:
+            _LOGGER.error("Error patching device configuration: %s", err)
             raise
 
     async def get_device_configuration(self, device_id: str) -> Dict[str, Any]:

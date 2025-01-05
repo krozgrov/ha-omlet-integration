@@ -1,0 +1,90 @@
+# custom_components/omlet_smart_coop/services.yaml
+
+# Door Control Services
+open_door:
+  name: Open Door
+  description: Open the coop door immediately
+  target:
+    entity:
+      integration: omlet_smart_coop
+
+close_door:
+  name: Close Door
+  description: Close the coop door immediately
+  target:
+    entity:
+      integration: omlet_smart_coop
+
+# Schedule Update Services
+update_overnight_sleep:
+  name: Update Overnight Sleep Schedule
+  description: Update the overnight sleep schedule settings
+  target:
+    entity:
+      integration: omlet_smart_coop
+  fields:
+    enabled:
+      name: Enable Overnight Sleep
+      description: Enable or disable overnight sleep mode
+      required: false
+      default: true
+      selector:
+        boolean: {}
+    start_time:
+      name: Sleep Start Time
+      description: Time to start overnight sleep (format HH:MM)
+      required: true
+      example: "23:00"
+      selector:
+        time: {}
+    end_time:
+      name: Sleep End Time
+      description: Time to end overnight sleep (format HH:MM)
+      required: true
+      example: "05:00"
+      selector:
+        time: {}
+
+update_door_schedule:
+  name: Update Door Schedule
+  description: Update the automatic door open and close schedule
+  target:
+    entity:
+      integration: omlet_smart_coop
+  fields:
+    open_mode:
+      name: Open Mode
+      description: Mode for door opening (time, light, or manual)
+      required: true
+      default: "time"
+      selector:
+        select:
+          options:
+            - "time"
+            - "light"
+            - "manual"
+    open_time:
+      name: Open Time
+      description: Time to open the door (format HH:MM) when in time mode
+      required: false
+      example: "06:30"
+      selector:
+        time: {}
+    close_mode:
+      name: Close Mode
+      description: Mode for door closing (time, light, or manual)
+      required: true
+      default: "time"
+      selector:
+        select:
+          options:
+            - "time"
+            - "light"
+            - "manual"
+    close_time:
+      name: Close Time
+      description: Time to close the door (format HH:MM) when in time mode
+      required: false
+      example: "20:30"
+      selector:
+        time: {}
