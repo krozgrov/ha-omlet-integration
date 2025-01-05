@@ -2,23 +2,32 @@ import aiohttp
 from aiohttp import ClientError
 import logging
 from typing import Any, Dict, List, Optional
+from .const import API_BASE_URL, ERROR_VALIDATE_API
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class OmletApiClient:
-    # Client for interacting with the Omlet API.
+    """Client for interacting with the Omlet API."""
 
-    BASE_URL = "https://x107.omlet.co.uk/api/v1"
+    BASE_URL = API_BASE_URL
 
     def __init__(self, api_key: str):
-        # Initialize the API client.
+        """Initialize the API client.
+
+        Args:
+            api_key: The API key for authentication
+        """
         self.api_key = api_key
         self._headers = {"Authorization": f"Bearer {self.api_key}"}
         self._timeout = 10
 
     async def is_valid(self) -> bool:
-        # Validate the connection to the API.
+        """Validate the connection to the API.
+
+        Returns:
+            bool: True if connection is valid, False otherwise
+        """
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -28,11 +37,18 @@ class OmletApiClient:
                 ) as response:
                     return response.status == 200
         except ClientError as err:
-            _LOGGER.error("Error validating API connection: %s", err)
+            _LOGGER.error(ERROR_VALIDATE_API, err)
             return False
 
     async def fetch_devices(self) -> List[Dict[str, Any]]:
-        # Fetch the list of devices.
+        """Fetch the list of devices.
+
+        Returns:
+            List[Dict[str, Any]]: List of device information
+
+        Raises:
+            ClientError: If there's an error fetching devices
+        """
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
@@ -89,6 +105,9 @@ class OmletApiClient:
 
         Returns:
             Dict containing the device configuration
+
+        Raises:
+            ClientError: If there's an error fetching the configuration
         """
         try:
             async with aiohttp.ClientSession() as session:
@@ -111,6 +130,9 @@ class OmletApiClient:
 
         Returns:
             Dict containing the device state
+
+        Raises:
+            ClientError: If there's an error fetching the state
         """
         try:
             async with aiohttp.ClientSession() as session:
@@ -136,6 +158,9 @@ class OmletApiClient:
 
         Returns:
             Dict containing the updated configuration
+
+        Raises:
+            ClientError: If there's an error updating the configuration
         """
         try:
             async with aiohttp.ClientSession() as session:

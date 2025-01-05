@@ -1,5 +1,3 @@
-# Base entity for Omlet integration
-
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
@@ -9,37 +7,38 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class OmletEntity(CoordinatorEntity):
-    # Base class for Omlet entities
+    """Base class for Omlet entities"""
 
     def __init__(self, coordinator, device_id):
-        # Initialize the entity
+        """Initialize the entity"""
         super().__init__(coordinator)
         self.device_id = device_id
         self._device_data = coordinator.data.get(device_id, {})
 
     @property
     def device_info(self) -> DeviceInfo:
-        # Return device registry information
+        """Return device registry information"""
         state = self._device_data.get("state", {}).get("general", {})
-        current_firmware = state.get("firmwareVersionCurrent")
-
         return DeviceInfo(
-            identifiers={(DOMAIN, self.device_id)},
+            identifiers={
+                (DOMAIN, self._device_data.get("deviceSerial"))
+            },  # Use deviceSerial as unique identifier
             name=self._device_data.get("name"),
             manufacturer="Omlet",
             model=self._device_data.get("deviceType"),
+            model_id=self._device_data.get("deviceTypeId"),
+            sw_version=state.get("firmwareVersionCurrent"),
+            hw_version=self.device_id,
             serial_number=self._device_data.get("deviceSerial"),
-            sw_version=current_firmware,
         )
 
     @property
     def extra_state_attributes(self):
-        # Return the state attributes specific to the device.
-        # Connectivity information
+        """Return the state attributes specific to the device."""
         connectivity = self._device_data.get("state", {}).get("connectivity", {})
         config = self._device_data.get("configuration", {})
-
         attributes = {
+            "device_id": self._device_data.get("deviceId"),
             "device_serial": self._device_data.get("deviceSerial"),
             "firmware_version_current": self._device_data.get("state", {})
             .get("general", {})
@@ -75,5 +74,4 @@ class OmletEntity(CoordinatorEntity):
             .get("uptime"),
             "last_connected": self._device_data.get("lastConnected"),
         }
-
         return {k: v for k, v in attributes.items() if v is not None}

@@ -1,106 +1,178 @@
 from homeassistant import config_entries
 from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
-from .const import DOMAIN, CONF_API_KEY, CONF_POLLING_INTERVAL, CONF_DEFAULT_POLLING_INTERVAL
+from homeassistant.core import callback
+from .const import (
+    DOMAIN,
+    CONF_API_KEY,
+    CONF_POLLING_INTERVAL,
+    CONF_DEFAULT_POLLING_INTERVAL,
+)
 from .api_client import OmletApiClient
 
+import logging
 
-# Error to indicate we cannot connect.
+_LOGGER = logging.getLogger(__name__)
+
+
 class CannotConnect(HomeAssistantError):
+    """Error to indicate we cannot connect."""
+
     pass
 
 
-# Error to indicate invalid authentication.
 class InvalidAuth(HomeAssistantError):
+    """Error to indicate invalid authentication."""
+
     pass
 
 
-# Handle the config flow for Omlet Smart Coop.
+async def validate_api_key(api_key: str):
+    """Validate the API key.
+
+    Args:
+        api_key: The API key to validate
+
+    Returns:
+        bool: True if validation succeeds
+
+    Raises:
+        InvalidAuth: If the API key is invalid
+    """
+    client = OmletApiClient(api_key)
+    if not await client.is_valid():
+        raise InvalidAuth
+    return True
+
+
+@config_entries.HANDLERS.register(DOMAIN)
 class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
+    """Handle a config flow for Omlet Smart Coop."""
+
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
-        # Handle the user step.
+        """Handle the initial step.
+
+        Args:
+            user_input: Dictionary of user input
+
+        Returns:
+            The next step in the flow
+        """
         errors = {}
         if user_input is not None:
             try:
-                await self._validate_input(user_input)
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
+                await validate_api_key(user_input[CONF_API_KEY])
             except InvalidAuth:
-                errors["base"] = "invalid_auth"
-            except Exception:
+                errors[CONF_API_KEY] = "invalid_auth"
+            except Exception as ex:
+                _LOGGER.exception("Unexpected exception during setup: %s", ex)
                 errors["base"] = "unknown"
-            else:
-                # Set unique ID and abort if already configured
-                await self.async_set_unique_id("omlet_coop")
-                self._abort_if_unique_id_configured()
 
-                # Create the configuration entry
+            if not errors:
+                # Create a new configuration entry
                 return self.async_create_entry(
                     title="Omlet Smart Coop",
-                    data=user_input,
+                    data={
+                        CONF_API_KEY: user_input[CONF_API_KEY],
+                        CONF_POLLING_INTERVAL: user_input.get(
+                            CONF_POLLING_INTERVAL, CONF_DEFAULT_POLLING_INTERVAL
+                        ),
+                    },
                 )
 
+        # Display the setup form
         return self.async_show_form(
             step_id="user",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_API_KEY): str,
-                    vol.Optional (CONF_POLLING_INTERVAL, default=CONF_DEFAULT_POLLING_INTERVAL): int,
+                    vol.Optional(
+                        CONF_POLLING_INTERVAL, default=CONF_DEFAULT_POLLING_INTERVAL
+                    ): vol.All(vol.Coerce(int), vol.Range(min=60, max=86400)),
                 }
             ),
             errors=errors,
         )
 
-    async def async_step_reauth(self, entry_data):
-        # Handle reauthentication.
-        self.reauth_entry = entry_data
-        await self.async_set_unique_id("omlet_coop")
-        return await self.async_step_reauth_confirm()
+    @staticmethod
+    @callback
+    def async_get_options_flow(config_entry):
+        """Get the options flow.
 
-    async def async_step_reauth_confirm(self, user_input=None):
-        # Handle reauthentication confirmation.
+        Args:
+            config_entry: The config entry to get options for
+
+        Returns:
+            The options flow handler
+        """
+        return OmletOptionsFlowHandler(config_entry)
+
+
+class OmletOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for Omlet Smart Coop."""
+
+    def __init__(self, config_entry):
+        """Initialize options flow.
+
+        Args:
+            config_entry: The config entry being configured
+        """
+        self.config_entry_id = config_entry.entry_id  # Store only the entry ID
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options.
+
+        Args:
+            user_input: Dictionary of user input
+
+        Returns:
+            The next step in the flow
+        """
+        return await self.async_step_user()
+
+    async def async_step_user(self, user_input=None):
+        """Handle user options.
+
+        Args:
+            user_input: Dictionary of user input
+
+        Returns:
+            The next step in the flow
+        """
         errors = {}
+
+        # Retrieve the config entry dynamically
+        config_entry = self.hass.config_entries.async_get_entry(self.config_entry_id)
+
         if user_input is not None:
             try:
-                await self._validate_input(user_input)
-            except CannotConnect:
-                errors["base"] = "cannot_connect"
-            except InvalidAuth:
-                errors["base"] = "invalid_auth"
-            except Exception:
-                errors["base"] = "unknown"
-            else:
-                # Update entry with new API key
-                self.hass.config_entries.async_update_entry(
-                    self.reauth_entry,
-                    data={
-                        **self.reauth_entry.data,
-                        CONF_API_KEY: user_input[CONF_API_KEY],
-                        CONF_POLLING_INTERVAL: user_input.get(CONF_DEFAULT_POLLING_INTERVAL),
-                    },
-                )
-                await self.hass.config_entries.async_reload(self.reauth_entry.entry_id)
-                return self.async_abort(reason="reauth_successful")
-        
-        current_interval = self.reauth_entry.get(CONF_DEFAULT_POLLING_INTERVAL)
+                # Validate polling interval or other options if necessary
+                polling_interval = user_input[CONF_POLLING_INTERVAL]
+                if not (60 <= polling_interval <= 86400):
+                    raise ValueError("Polling interval out of range")
+            except ValueError:
+                errors[CONF_POLLING_INTERVAL] = "invalid_polling_interval"
+
+            if not errors:
+                # Save updated options
+                return self.async_create_entry(title="", data=user_input)
+
+        # Default values for the form
+        current_interval = config_entry.options.get(
+            CONF_POLLING_INTERVAL, CONF_DEFAULT_POLLING_INTERVAL
+        )
+
+        # Display the form to the user
         return self.async_show_form(
-            step_id="reauth_confirm",
+            step_id="user",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_API_KEY): str,
-                    vol.Optional(CONF_POLLING_INTERVAL, default=current_interval): int,
+                    vol.Optional(
+                        CONF_POLLING_INTERVAL, default=current_interval
+                    ): vol.All(vol.Coerce(int), vol.Range(min=60, max=86400)),
                 }
             ),
             errors=errors,
         )
-
-    async def _validate_input(self, data):
-        # Validate the user input.
-        api_key = data[CONF_API_KEY]
-
-        # Use the API client to validate
-        client = OmletApiClient(api_key=api_key)  # No host needed
-        if not await client.is_valid():
-            raise InvalidAuth
