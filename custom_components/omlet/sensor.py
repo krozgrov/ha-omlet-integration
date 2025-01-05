@@ -36,7 +36,7 @@ SENSOR_TYPES = {
     "wifi_strength": SensorEntityDescription(
         key="wifi_strength",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
-        native_unit_of_measurement=PERCENTAGE,
+        native_unit_of_measurement="dBm",
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:wifi-strength-3",
     ),
