@@ -76,4 +76,4 @@ For bug reports, include the debug log, which can be enabled in configuration YA
 logger:
   default: warning
   logs:
-    custom_components.omlet: debug
+    custom_components.omlet_smart_coop: debug
