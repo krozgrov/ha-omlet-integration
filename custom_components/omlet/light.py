@@ -43,17 +43,13 @@ class OmletLight(OmletEntity, LightEntity):
         self._attr_supported_color_modes = {
             ColorMode.ONOFF
         }  # Assuming only ON/OFF is supported
-
-    @property
-    def supported_color_modes(self):
-        # Return the supported color modes for this light.
-        return self._attr_supported_color_modes
+        self._attr_color_mode = ColorMode.ONOFF
 
     @property
     def is_on(self):
         # Return whether the light is on.
         device_data = self.coordinator.data.get(self.device_id, {})
-        state = device_data["state"]["light"]["state"]
+        state = device_data.get("state", {}).get("light", {}).get("state")
         return state in ["on", "onpending"]
 
     async def async_turn_on(self, **kwargs):
@@ -70,7 +66,7 @@ class OmletLight(OmletEntity, LightEntity):
         # Execute an action on the device.
         device_data = self.coordinator.data.get(self.device_id, {})
         action_url = next(
-            (a["url"] for a in device_data["actions"] if a["actionValue"] == action),
+            (a["url"] for a in device_data.get("actions", []) if a["actionValue"] == action),
             None,
         )
         if action_url:
