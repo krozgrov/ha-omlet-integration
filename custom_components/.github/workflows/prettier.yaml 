@@ -1,0 +1,19 @@
+name: Prettier YAML Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Prettier for YAML files
+        uses: creyD/prettier_action@v4.3
+        with:
+          prettier_options: --check "**/*.{yaml,yml}"
