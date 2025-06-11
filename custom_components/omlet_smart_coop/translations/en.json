@@ -28,13 +28,23 @@
   },
   "entity": {
     "sensor": {
-      "battery_level": "Battery Level",
-      "wifi_signal_strength": "WiFi Signal Strength",
-      "firmware_version": "Firmware Version"
+      "battery_level": {
+        "name": "Battery Level"
+      },
+      "wifi_signal_strength": {
+        "name": "WiFi Signal Strength"
+      },
+      "firmware_version": {
+        "name": "Firmware Version"
+      }
     },
     "switch": {
-      "light": "Light",
-      "door": "Door"
+      "light": {
+        "name": "Light"
+      },
+      "door": {
+        "name": "Door"
+      }
     }
   }
 }
