@@ -133,9 +133,9 @@ def parse_timestamp(timestamp_str: str) -> datetime | None:
         return None
     try:
         return datetime.fromisoformat(timestamp_str)
-    except ValueError:
-        return datetime.fromisoformat(timestamp_str).replace(tzinfo=ZoneInfo("UTC"))
-
+    except Exception as e:
+        _LOGGER.warning("Failed to parse timestamp: %s", e)
+        return None
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the sensors from the config entry."""
