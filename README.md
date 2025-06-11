@@ -5,7 +5,7 @@ A **integration for Home Assistant** that connects your Omlet Smart Automatic Ch
 
 ## Sponsor
 
-A lot of effort is going into that integration. So if you can afford it and want to support me:
+A lot of effort is going into this integration. So if you can afford it and want to support me:
 
 <a href="https://www.buymeacoffee.com/krozgrov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
@@ -51,6 +51,11 @@ A lot of effort is going into that integration. So if you can afford it and want
 
 4. Devices will be automatically discovered and added.
 <img width="794" alt="Screenshot 2024-12-29 at 4 28 36 PM" src="https://github.com/user-attachments/assets/371c9547-eb1d-4569-911a-b65d358fb1b7" />
+
+## Upcoming Features
+
+1. Webhook supports for event messaging.
+2. Support for Omlet Smart Feeder - waiting for mine to get delivered.
 
 ## API Details
 
