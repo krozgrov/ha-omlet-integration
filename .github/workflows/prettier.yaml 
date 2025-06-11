@@ -16,4 +16,4 @@ jobs:
       - name: Run Prettier for YAML files
         uses: creyD/prettier_action@v4.3
         with:
-          prettier_options: --check "**/*.{yaml,yml}"
+          prettier_options: "--check '**/*.{yaml,yml}'"
