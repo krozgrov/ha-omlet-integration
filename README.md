@@ -1,7 +1,7 @@
 
 # Omlet Smart Automatic Chicken Coop Door Integration for Home Assistant
 
-A **integration for Home Assistant** that connects your Omlet Smart Automatic Chicken Coop Door and related devices, enabling monitoring and control directly from Home Assistant using the Omlet Offical API.
+An integration for Home Assistant that connects your Omlet Smart Automatic Chicken Coop Door and related devices, enabling monitoring and control directly from Home Assistant using the Omlet official API.
 
 ## Sponsor
 
@@ -32,14 +32,14 @@ A lot of effort is going into this integration. So if you can afford it and want
 
 ### Manual Installation
 1. Download the repository as a ZIP file.
-2. Extract the contents into the `custom_components/omlet` directory within your Home Assistant configuration folder.
+2. Extract the contents into the `custom_components/omlet_smart_coop` directory within your Home Assistant configuration folder.
 3. Restart Home Assistant.
 
 ### Using HACS
 1. Add this repository as a custom repository in HACS.
 2. Repository - https://github.com/krozgrov/ha-omlet-integration
 3. Type - Integration
-4. Search for **Omlet Integration** and select current Release and Download.
+4. Search for **Omlet Smart Coop** and select current Release and Download.
 5. Restart Home Assistant.
 
 ## Configuration

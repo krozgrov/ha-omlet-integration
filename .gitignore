@@ -1,1 +1,51 @@
-**/.DS_Store
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# VS Code / Cursor settings
+.vscode/
+*.code-workspace
+
+# Python egg & build files
+*.egg-info/
+*.egg
+build/
+dist/
+
+# Pipenv / Poetry
+Pipfile.lock
+poetry.lock
+
+# Test coverage
+.coverage
+htmlcov/
+.cache/
+.pytest_cache/
+
+# IDEs
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# MacOS
+.DS_Store
+
+# Logs and dumps
+*.log
+*.sqlite3
+
+# dotenv
+.env
+.env.*
+
+# mypy / pylint / pyright
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pytype/
