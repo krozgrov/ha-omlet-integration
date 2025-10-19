@@ -18,6 +18,26 @@
       "already_configured": "This API key is already configured."
     }
   },
+  "options": {
+    "step": {
+      "user": {
+        "title": "Omlet Smart Coop Options",
+        "description": "Configure update method and webhook settings.",
+        "data": {
+          "polling_interval": "Polling interval (seconds)",
+          "enable_webhooks": "Enable webhooks",
+          "webhook_token": "Webhook token (optional)",
+          "disable_polling": "Disable polling (webhooks only)"
+        },
+        "data_description": {
+          "polling_interval": "How often to poll the Omlet API when polling is enabled.",
+          "enable_webhooks": "Register a Home Assistant webhook and refresh entities immediately on push events.",
+          "webhook_token": "Shared secret to validate Omlet webhooks. Enter the same token in Omlet → Manage Webhooks.",
+          "disable_polling": "Stop scheduled polling and rely only on webhooks for real-time updates."
+        }
+      }
+    }
+  },
   "device_automation": {
     "action_type": {
       "open_door": "Open the coop door",

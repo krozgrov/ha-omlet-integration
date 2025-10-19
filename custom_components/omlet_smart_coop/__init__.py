@@ -18,6 +18,7 @@ from .const import (
     CONF_DISABLE_POLLING,
 )
 from homeassistant.components import webhook as hass_webhook
+from homeassistant.components import persistent_notification as pn
 from aiohttp.web import Response
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
@@ -105,6 +106,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "Omlet Smart Coop webhook enabled. Configure at Omlet portal to POST to: %s",
                 webhook_url,
             )
+            try:
+                pn.async_create(
+                    hass,
+                    f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
+                    title="Omlet Smart Coop Webhook",
+                )
+            except Exception:
+                pass
     except Exception as ex:
         _LOGGER.error("Failed to set up webhook: %s", ex)
 
@@ -211,7 +220,16 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                     return Response(status=500, text="error")
 
             hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", webhook_id, _handle_webhook)
-            _LOGGER.info("Webhook enabled. URL: %s", hass_webhook.async_generate_url(hass, webhook_id))
+            webhook_url = hass_webhook.async_generate_url(hass, webhook_id)
+            _LOGGER.info("Webhook enabled. URL: %s", webhook_url)
+            try:
+                pn.async_create(
+                    hass,
+                    f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
+                    title="Omlet Smart Coop Webhook",
+                )
+            except Exception:
+                pass
         elif not enabled and current_id:
             try:
                 hass_webhook.async_unregister(hass, current_id)
