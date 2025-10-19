@@ -7,6 +7,8 @@ from .const import (
     CONF_API_KEY,
     CONF_POLLING_INTERVAL,
     CONF_DEFAULT_POLLING_INTERVAL,
+    CONF_ENABLE_WEBHOOKS,
+    CONF_WEBHOOK_TOKEN,
 )
 from .api_client import OmletApiClient
 
@@ -172,7 +174,15 @@ class OmletOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_POLLING_INTERVAL, default=current_interval
                     ): vol.All(vol.Coerce(int), vol.Range(min=60, max=86400)),
+                    vol.Optional(CONF_ENABLE_WEBHOOKS, default=self._get_current_option(config_entry, CONF_ENABLE_WEBHOOKS, False)): bool,
+                    vol.Optional(CONF_WEBHOOK_TOKEN, default=self._get_current_option(config_entry, CONF_WEBHOOK_TOKEN, "")): str,
                 }
             ),
             errors=errors,
         )
+
+    def _get_current_option(self, config_entry, key, default):
+        try:
+            return config_entry.options.get(key, default)
+        except Exception:
+            return default

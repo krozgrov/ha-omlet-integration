@@ -46,6 +46,11 @@ POLL_FREQ_POWER_SAVINGS = 600
 # Valid Modes
 VALID_DOOR_MODES = ["time", "light", "manual"]
 
+# Webhook configuration
+CONF_ENABLE_WEBHOOKS = "enable_webhooks"
+CONF_WEBHOOK_ID = "webhook_id"
+CONF_WEBHOOK_TOKEN = "webhook_token"
+
 # Log Messages
 
 # General API Errors
