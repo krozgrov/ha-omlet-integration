@@ -15,6 +15,7 @@ from .const import (
     CONF_DEFAULT_POLLING_INTERVAL,
     CONF_ENABLE_WEBHOOKS,
     CONF_WEBHOOK_ID,
+    CONF_DISABLE_POLLING,
 )
 from homeassistant.components import webhook as hass_webhook
 from aiohttp.web import Response
@@ -161,7 +162,8 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
     coordinator = entry_data["coordinator"]
 
     # Extract the new polling interval from options
-    new_interval = entry.options.get(
+    disable_polling = entry.options.get(CONF_DISABLE_POLLING, False)
+    new_interval = None if disable_polling else entry.options.get(
         CONF_POLLING_INTERVAL, CONF_DEFAULT_POLLING_INTERVAL
     )
 
@@ -169,7 +171,8 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
     try:
         await coordinator.update_polling_interval(new_interval)
         _LOGGER.info(
-            "Polling interval successfully updated to %s seconds", new_interval
+            "Polling %s",
+            "disabled (webhooks only)" if disable_polling else f"{new_interval} seconds",
         )
     except ValueError as ex:
         _LOGGER.error("Failed to update polling interval: %s", ex)

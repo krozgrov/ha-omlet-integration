@@ -50,6 +50,7 @@ VALID_DOOR_MODES = ["time", "light", "manual"]
 CONF_ENABLE_WEBHOOKS = "enable_webhooks"
 CONF_WEBHOOK_ID = "webhook_id"
 CONF_WEBHOOK_TOKEN = "webhook_token"
+CONF_DISABLE_POLLING = "disable_polling"  # Webhooks-only mode
 
 # Log Messages
 

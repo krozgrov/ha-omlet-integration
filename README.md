@@ -80,7 +80,10 @@ Steps:
 
 Notes:
 - When Home Assistant receives a webhook, the integration immediately refreshes device state via the Omlet API to ensure entities reflect the latest values.
-- If you disable webhooks in Options, the integration unregisters its local webhook handler and falls back to polling.
+- You can choose between legacy polling and webhooks-only mode:
+  - Legacy polling: leave "Disable polling" turned OFF (default) and set your preferred polling interval.
+  - Webhooks only: turn ON "Disable polling" in Options to stop periodic polling and rely on push updates.
+  - If you disable webhooks in Options, the integration unregisters its local webhook handler and falls back to polling.
 
 ## License
 

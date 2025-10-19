@@ -9,6 +9,7 @@ from .const import (
     CONF_DEFAULT_POLLING_INTERVAL,
     CONF_ENABLE_WEBHOOKS,
     CONF_WEBHOOK_TOKEN,
+    CONF_DISABLE_POLLING,
 )
 from .api_client import OmletApiClient
 
@@ -176,6 +177,7 @@ class OmletOptionsFlowHandler(config_entries.OptionsFlow):
                     ): vol.All(vol.Coerce(int), vol.Range(min=60, max=86400)),
                     vol.Optional(CONF_ENABLE_WEBHOOKS, default=self._get_current_option(config_entry, CONF_ENABLE_WEBHOOKS, False)): bool,
                     vol.Optional(CONF_WEBHOOK_TOKEN, default=self._get_current_option(config_entry, CONF_WEBHOOK_TOKEN, "")): str,
+                    vol.Optional(CONF_DISABLE_POLLING, default=self._get_current_option(config_entry, CONF_DISABLE_POLLING, False)): bool,
                 }
             ),
             errors=errors,
