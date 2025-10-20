@@ -12,6 +12,7 @@ from homeassistant.components import webhook as hass_webhook
 import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import service as svc
 from homeassistant.helpers.network import get_url
 
 from .coordinator import OmletDataCoordinator
@@ -45,25 +46,40 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def get_integration_device_ids(
-    hass: HomeAssistant, coordinator: OmletDataCoordinator, call_data: dict
-) -> list[str]:  # Changed return type
+    hass: HomeAssistant, coordinator: OmletDataCoordinator, call: ServiceCall
+) -> list[str]:
     """Map Home Assistant device identifiers to integration device IDs."""
-    device_ids = call_data.get("device_id", [])  # from target or field selector
-    entity_id = call_data.get("entity_id")
+    # Extract from target pickers
+    ref_device_ids = svc.async_extract_referenced_device_ids(hass, call) or set()
+    ref_entity_ids = svc.async_extract_referenced_entity_ids(hass, call) or set()
+
+    # Backward-compat fields
+    call_data = call.data or {}
+    device_ids_field = call_data.get("device_id", [])
+    entity_id_field = call_data.get("entity_id")
     device_name = call_data.get("name")
 
-    _LOGGER.debug("Full service call data: %s", call_data)
+    _LOGGER.debug(
+        "Service call data=%s target_devices=%s target_entities=%s",
+        call_data,
+        list(ref_device_ids),
+        list(ref_entity_ids),
+    )
 
-    # Ensure device_ids is a list
-    if not isinstance(device_ids, list):
-        device_ids = [device_ids] if device_ids else []
+    # Normalize lists and merge
+    device_ids: list[str] = []
+    if isinstance(device_ids_field, list):
+        device_ids.extend(device_ids_field)
+    elif isinstance(device_ids_field, str) and device_ids_field:
+        device_ids.append(device_ids_field)
+    device_ids = list(set(device_ids) | set(ref_device_ids))
 
-    # Normalize entity_ids to a list
     entity_ids: list[str] = []
-    if isinstance(entity_id, list):
-        entity_ids = entity_id
-    elif isinstance(entity_id, str) and entity_id:
-        entity_ids = [entity_id]
+    if isinstance(entity_id_field, list):
+        entity_ids.extend(entity_id_field)
+    elif isinstance(entity_id_field, str) and entity_id_field:
+        entity_ids.append(entity_id_field)
+    entity_ids = list(set(entity_ids) | set(ref_entity_ids))
 
     _LOGGER.debug("Processing device IDs: %s", device_ids)
 
@@ -267,7 +283,7 @@ async def async_register_services(
         """Handle the open door service call."""
         try:
             integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
+                hass, coordinator, call
             )
             if not integration_device_ids:
                 return
@@ -297,7 +313,7 @@ async def async_register_services(
         """Handle the close door service call."""
         try:
             integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
+                hass, coordinator, call
             )
             if not integration_device_ids:
                 return
@@ -327,7 +343,7 @@ async def async_register_services(
         """Handle updating overnight sleep schedule."""
         try:
             integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
+                hass, coordinator, call
             )
             if not integration_device_ids:
                 return
@@ -412,7 +428,7 @@ async def async_register_services(
         """Handle updating door schedule."""
         try:
             integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
+                hass, coordinator, call
             )
             if not integration_device_ids:
                 return
