@@ -31,7 +31,7 @@
         },
         "data_description": {
           "polling_interval": "How often to poll the Omlet API when polling is enabled.",
-          "enable_webhooks": "Enable a fixed webhook endpoint at /api/webhook/omlet_smart_coop to refresh entities immediately on push events.",
+          "enable_webhooks": "Enable a webhook at a random endpoint (shown in a notification) to refresh entities immediately on push events.",
           "webhook_token": "Shared secret to validate Omlet webhooks. Enter the same token in Omlet → Manage Webhooks.",
           "disable_polling": "Stop scheduled polling and rely only on webhooks for real-time updates."
         }

@@ -16,7 +16,6 @@ from .const import (
     CONF_ENABLE_WEBHOOKS,
     CONF_WEBHOOK_ID,
     CONF_DISABLE_POLLING,
-    FIXED_WEBHOOK_ID,
 )
 from homeassistant.components import webhook as hass_webhook
 from homeassistant.components import persistent_notification as pn
@@ -59,16 +58,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Optionally register webhook support
     try:
         if entry.options.get(CONF_ENABLE_WEBHOOKS, False):
-            # Always use fixed webhook id for this integration
-            old_id = entry.data.get(CONF_WEBHOOK_ID)
-            webhook_id = FIXED_WEBHOOK_ID
-            if old_id and old_id != webhook_id:
+            # Use a stable, random webhook id per entry
+            webhook_id = entry.data.get(CONF_WEBHOOK_ID)
+            # Migrate away from any prior fixed id (== DOMAIN)
+            if webhook_id == DOMAIN:
                 try:
-                    hass_webhook.async_unregister(hass, old_id)
+                    hass_webhook.async_unregister(hass, DOMAIN)
                 except Exception:
                     pass
-            # Persist fixed id for clarity
-            if old_id != webhook_id:
+                webhook_id = None
+            if not webhook_id:
+                webhook_id = hass_webhook.async_generate_id()
                 hass.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
                 )
@@ -204,14 +204,19 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
     # Trigger a refresh of data after options update
     await coordinator.async_request_refresh()
 
-    # Handle enabling/disabling webhooks dynamically (fixed id)
+    # Handle enabling/disabling webhooks dynamically (random id persisted in entry)
     try:
         enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
-        current_id = FIXED_WEBHOOK_ID
+        current_id = entry.data.get(CONF_WEBHOOK_ID)
 
         if enabled:
-            # Persist fixed id for clarity
-            if entry.data.get(CONF_WEBHOOK_ID) != current_id:
+            # Ensure we have a random id; migrate from fixed id if needed
+            if not current_id or current_id == DOMAIN:
+                try:
+                    hass_webhook.async_unregister(hass, DOMAIN)
+                except Exception:
+                    pass
+                current_id = hass_webhook.async_generate_id()
                 hass.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_WEBHOOK_ID: current_id}
                 )
@@ -259,11 +264,12 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
             except Exception:
                 pass
         else:
-            # Disabled: unregister fixed id
-            try:
-                hass_webhook.async_unregister(hass, current_id)
-                _LOGGER.info("Webhook disabled and unregistered")
-            except Exception:
-                pass
+            # Disabled: unregister current id if present
+            if current_id:
+                try:
+                    hass_webhook.async_unregister(hass, current_id)
+                    _LOGGER.info("Webhook disabled and unregistered")
+                except Exception:
+                    pass
     except Exception as ex:
         _LOGGER.exception("Webhook option update handling failed: %r", ex)

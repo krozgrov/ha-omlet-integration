@@ -73,8 +73,8 @@ You can enable real‑time updates using Omlet webhooks so Home Assistant receiv
 Steps:
 - Ensure your Home Assistant instance is reachable from the internet (Home Assistant Cloud or a configured external URL).
 - In the integration Options, enable “Enable webhooks” and (optionally) set a `webhook_token` for verification.
-- Your fixed webhook endpoint is: `/api/webhook/omlet_smart_coop`.
-- In the Omlet Developer Portal, visit “Manage Webhooks” and create a webhook pointing to your HA URL + the path above.
+- When enabled, the integration registers a random webhook endpoint and shows the full URL in a Home Assistant notification. You can also call the service `omlet_smart_coop.show_webhook_url` to display it again.
+- In the Omlet Developer Portal, visit “Manage Webhooks” and create a webhook pointing to your HA’s public URL shown by the integration.
   - If you set a `webhook_token` in the integration, enter the same token in the portal so the integration can validate incoming requests.
   - Select the events you want to receive (e.g., door opened/closed, light state changes).
 
