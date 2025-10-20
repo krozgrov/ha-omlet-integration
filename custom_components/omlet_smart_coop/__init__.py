@@ -189,19 +189,24 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
     # Trigger a refresh of data after options update
     await coordinator.async_request_refresh()
 
-    # Handle enabling/disabling webhooks dynamically
+    # Handle enabling/disabling webhooks dynamically (idempotent, no hass.components access)
     try:
-        from homeassistant.components import webhook as hass_webhook
-        from .const import CONF_ENABLE_WEBHOOKS, CONF_WEBHOOK_ID
-
         enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
         current_id = entry.data.get(CONF_WEBHOOK_ID)
-        is_registered = current_id in getattr(hass.components.webhook, "_registrations", {}) if hasattr(hass.components.webhook, "_registrations") else False
 
-        if enabled and not current_id:
-            # Create and register
-            webhook_id = hass_webhook.async_generate_id()
-            hass.config_entries.async_update_entry(entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id})
+        if enabled:
+            # Ensure we have an ID
+            if not current_id:
+                current_id = hass_webhook.async_generate_id()
+                hass.config_entries.async_update_entry(
+                    entry, data={**entry.data, CONF_WEBHOOK_ID: current_id}
+                )
+
+            # Unregister if already registered (no-op if not)
+            try:
+                hass_webhook.async_unregister(hass, current_id)
+            except Exception:
+                pass
 
             async def _handle_webhook(hass, webhook_id_recv, request):
                 try:
@@ -211,7 +216,12 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                     except Exception:
                         pass
                     expected = entry.options.get("webhook_token")
-                    provided = request.headers.get("X-Omlet-Token") or (payload or {}).get("token")
+                    provided = (
+                        request.headers.get("X-Omlet-Token")
+                        or (payload or {}).get("token")
+                        or (payload or {}).get("secret")
+                        or request.query.get("token")
+                    )
                     if expected and (not provided or provided != expected):
                         return Response(status=401, text="invalid token")
                     await coordinator.async_request_refresh()
@@ -219,8 +229,10 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                 except Exception:
                     return Response(status=500, text="error")
 
-            hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", webhook_id, _handle_webhook)
-            webhook_url = hass_webhook.async_generate_url(hass, webhook_id)
+            hass_webhook.async_register(
+                hass, DOMAIN, "Omlet Smart Coop", current_id, _handle_webhook
+            )
+            webhook_url = hass_webhook.async_generate_url(hass, current_id)
             _LOGGER.info("Webhook enabled. URL: %s", webhook_url)
             try:
                 pn.async_create(
@@ -230,11 +242,13 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                 )
             except Exception:
                 pass
-        elif not enabled and current_id:
-            try:
-                hass_webhook.async_unregister(hass, current_id)
-                _LOGGER.info("Webhook disabled and unregistered")
-            except Exception:
-                pass
+        else:
+            # Disabled: unregister if we have an ID
+            if current_id:
+                try:
+                    hass_webhook.async_unregister(hass, current_id)
+                    _LOGGER.info("Webhook disabled and unregistered")
+                except Exception:
+                    pass
     except Exception as ex:
         _LOGGER.warning("Webhook option update handling failed: %s", ex)
