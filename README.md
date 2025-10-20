@@ -52,11 +52,6 @@ A lot of effort is going into this integration. So if you can afford it and want
 4. Devices will be automatically discovered and added.
 <img width="794" alt="Screenshot 2024-12-29 at 4 28 36 PM" src="https://github.com/user-attachments/assets/371c9547-eb1d-4569-911a-b65d358fb1b7" />
 
-## Upcoming Features
-
-1. Webhook supports for event messaging.
-2. Support for Omlet Smart Feeder - waiting for mine to get delivered.
-
 ## API Details
 
 This integration uses the [Omlet API](https://smart.omlet.com/developers/api#/). It fetches device states, performs actions, and listens for updates.
