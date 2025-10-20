@@ -25,6 +25,7 @@ SERVICE_OPEN_DOOR = "open_door"
 SERVICE_CLOSE_DOOR = "close_door"
 SERVICE_UPDATE_OVERNIGHT_SLEEP = "update_overnight_sleep"
 SERVICE_UPDATE_DOOR_SCHEDULE = "update_door_schedule"
+SERVICE_SHOW_WEBHOOK_URL = "show_webhook_url"
 
 # Service Fields/Attributes
 ATTR_ENABLED = "enabled"

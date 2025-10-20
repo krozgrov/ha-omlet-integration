@@ -6,6 +6,8 @@ from typing import Any
 from aiohttp import ClientError
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.components import persistent_notification as pn
+from homeassistant.components import webhook as hass_webhook
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 from .coordinator import OmletDataCoordinator
@@ -15,6 +17,7 @@ from .const import (
     SERVICE_CLOSE_DOOR,
     SERVICE_UPDATE_OVERNIGHT_SLEEP,
     SERVICE_UPDATE_DOOR_SCHEDULE,
+    SERVICE_SHOW_WEBHOOK_URL,
     ATTR_ENABLED,
     ATTR_START_TIME,
     ATTR_END_TIME,
@@ -112,6 +115,34 @@ async def async_register_services(
     hass: HomeAssistant, coordinator: OmletDataCoordinator
 ) -> None:
     """Register services for Omlet Smart Coop."""
+
+    async def handle_show_webhook_url(call: ServiceCall) -> None:
+        """Show the webhook URL and status via notification and log."""
+        try:
+            # Assume single entry for this domain
+            entries = hass.config_entries.async_entries(DOMAIN)
+            if not entries:
+                _LOGGER.error("No config entries found for %s", DOMAIN)
+                return
+            entry = entries[0]
+            enabled = entry.options.get("enable_webhooks", False)
+            webhook_id = entry.data.get("webhook_id")
+
+            if enabled and webhook_id:
+                url = hass_webhook.async_generate_url(hass, webhook_id)
+                msg = f"Webhook enabled. URL: {url}"
+            elif enabled and not webhook_id:
+                msg = "Webhooks enabled but no webhook_id yet. Toggle webhooks off/on in Options to generate one."
+            else:
+                msg = "Webhooks are disabled in Options. Enable them to generate a webhook URL."
+
+            _LOGGER.info(msg)
+            try:
+                pn.async_create(hass, msg, title="Omlet Smart Coop Webhook")
+            except Exception:  # ignore notification failures
+                pass
+        except Exception as err:
+            _LOGGER.error("Failed to show webhook URL: %s", err)
 
     async def handle_open_door(call: ServiceCall) -> None:
         """Handle the open door service call."""
@@ -370,6 +401,7 @@ async def async_register_services(
     hass.services.async_register(
         DOMAIN, SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule
     )
+    hass.services.async_register(DOMAIN, SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
 
 
 def async_remove_services(hass: HomeAssistant) -> None:

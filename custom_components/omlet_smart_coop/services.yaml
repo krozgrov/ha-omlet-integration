@@ -116,3 +116,8 @@ update_door_schedule:
         number:
           min: 0
           max: 60
+
+# Utility Services
+show_webhook_url:
+  name: Show Webhook URL
+  description: Create a notification with the webhook URL and status
