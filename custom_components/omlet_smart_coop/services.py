@@ -11,6 +11,7 @@ from homeassistant.components import persistent_notification as pn
 from homeassistant.components import webhook as hass_webhook
 import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.helpers.network import get_url
 
 from .coordinator import OmletDataCoordinator
 from .const import (
@@ -135,8 +136,16 @@ async def async_register_services(
                 try:
                     url = hass_webhook.async_generate_url(hass, webhook_id)
                 except Exception as gen_err:
-                    url = f"/api/webhook/{webhook_id}"
-                    _LOGGER.debug("Falling back to path-only webhook URL in service due to: %r", gen_err)
+                    try:
+                        base = get_url(hass)
+                        url = f"{base}/api/webhook/{webhook_id}"
+                    except Exception as url_err:
+                        url = f"/api/webhook/{webhook_id}"
+                        _LOGGER.debug(
+                            "Falling back to path-only webhook URL in service. generate_url=%r, get_url=%r",
+                            gen_err,
+                            url_err,
+                        )
                 msg = f"Webhook enabled. URL: {url}"
             elif enabled and not webhook_id:
                 msg = "Webhooks enabled but no webhook_id yet. Toggle webhooks off/on in Options to generate one."
@@ -203,8 +212,12 @@ async def async_register_services(
                 hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", new_id, _handle_webhook)
                 try:
                     url = hass_webhook.async_generate_url(hass, new_id)
-                except Exception:
-                    url = f"/api/webhook/{new_id}"
+                except Exception as gen_err:
+                    try:
+                        base = get_url(hass)
+                        url = f"{base}/api/webhook/{new_id}"
+                    except Exception:
+                        url = f"/api/webhook/{new_id}"
 
             msg = (
                 f"Webhook ID regenerated. New URL: {url}. Update Omlet Developer Portal."

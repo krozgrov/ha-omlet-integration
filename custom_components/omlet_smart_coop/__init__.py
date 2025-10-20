@@ -21,6 +21,7 @@ from homeassistant.components import webhook as hass_webhook
 from homeassistant.components import persistent_notification as pn
 from aiohttp.web import Response
 import secrets
+from homeassistant.helpers.network import get_url
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -116,9 +117,17 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             try:
                 webhook_url = hass_webhook.async_generate_url(hass, webhook_id)
             except Exception as gen_err:
-                # Fallback to path-only if URL generation fails (e.g., no external URL configured)
-                webhook_url = f"/api/webhook/{webhook_id}"
-                _LOGGER.debug("Falling back to path-only webhook URL due to: %r", gen_err)
+                # Fallback: try HA base URL builder, then path-only
+                try:
+                    base = get_url(hass)
+                    webhook_url = f"{base}/api/webhook/{webhook_id}"
+                except Exception as url_err:
+                    webhook_url = f"/api/webhook/{webhook_id}"
+                    _LOGGER.debug(
+                        "Falling back to path-only webhook URL (setup). generate_url=%r, get_url=%r",
+                        gen_err,
+                        url_err,
+                    )
             _LOGGER.info(
                 "Omlet Smart Coop webhook enabled. Configure at Omlet portal to POST to: %s",
                 webhook_url,
@@ -255,8 +264,16 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
             try:
                 webhook_url = hass_webhook.async_generate_url(hass, current_id)
             except Exception as gen_err:
-                webhook_url = f"/api/webhook/{current_id}"
-                _LOGGER.debug("Falling back to path-only webhook URL due to: %r", gen_err)
+                try:
+                    base = get_url(hass)
+                    webhook_url = f"{base}/api/webhook/{current_id}"
+                except Exception as url_err:
+                    webhook_url = f"/api/webhook/{current_id}"
+                    _LOGGER.debug(
+                        "Falling back to path-only webhook URL (toggle). generate_url=%r, get_url=%r",
+                        gen_err,
+                        url_err,
+                    )
             _LOGGER.info("Webhook enabled (enabled=%s, id=%s). URL: %s", enabled, current_id, webhook_url)
             try:
                 pn.async_create(
