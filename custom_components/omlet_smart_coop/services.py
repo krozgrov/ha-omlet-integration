@@ -24,6 +24,7 @@ from .const import (
     SERVICE_SHOW_WEBHOOK_URL,
     CONF_WEBHOOK_ID,
     CONF_ENABLE_WEBHOOKS,
+    CONF_WEBHOOK_NOTIFIED_ID,
     ATTR_ENABLED,
     ATTR_START_TIME,
     ATTR_END_TIME,
@@ -249,6 +250,14 @@ async def async_register_services(
             _LOGGER.info(msg)
             try:
                 pn.async_create(hass, msg, title="Omlet Smart Coop Webhook")
+            except Exception:
+                pass
+            # Mark that we've notified for this webhook id
+            try:
+                hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data, CONF_WEBHOOK_ID: new_id, CONF_WEBHOOK_NOTIFIED_ID: new_id},
+                )
             except Exception:
                 pass
         except Exception as err:

@@ -16,6 +16,7 @@ from .const import (
     CONF_ENABLE_WEBHOOKS,
     CONF_WEBHOOK_ID,
     CONF_DISABLE_POLLING,
+    CONF_WEBHOOK_NOTIFIED_ID,
 )
 from homeassistant.components import webhook as hass_webhook
 from homeassistant.components import persistent_notification as pn
@@ -140,14 +141,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 "Omlet Smart Coop webhook enabled. Configure at Omlet portal to POST to: %s",
                 webhook_url,
             )
-            try:
-                pn.async_create(
-                    hass,
-                    f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
-                    title="Omlet Smart Coop Webhook",
+            # Notify only once per webhook_id unless rotated
+            if entry.data.get(CONF_WEBHOOK_NOTIFIED_ID) != webhook_id:
+                try:
+                    pn.async_create(
+                        hass,
+                        f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
+                        title="Omlet Smart Coop Webhook",
+                    )
+                except Exception:
+                    pass
+                # Persist that we've notified for this id
+                hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data, CONF_WEBHOOK_ID: webhook_id, CONF_WEBHOOK_NOTIFIED_ID: webhook_id},
                 )
-            except Exception:
-                pass
     except Exception as ex:
         _LOGGER.exception("Failed to set up webhook: %r", ex)
 
@@ -289,14 +297,20 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                         url_err,
                     )
             _LOGGER.info("Webhook enabled (enabled=%s, id=%s). URL: %s", enabled, current_id, webhook_url)
-            try:
-                pn.async_create(
-                    hass,
-                    f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
-                    title="Omlet Smart Coop Webhook",
+            # Notify only once per webhook_id unless rotated
+            if entry.data.get(CONF_WEBHOOK_NOTIFIED_ID) != current_id:
+                try:
+                    pn.async_create(
+                        hass,
+                        f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
+                        title="Omlet Smart Coop Webhook",
+                    )
+                except Exception:
+                    pass
+                hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data, CONF_WEBHOOK_ID: current_id, CONF_WEBHOOK_NOTIFIED_ID: current_id},
                 )
-            except Exception:
-                pass
         else:
             # Disabled: unregister current id if present
             if current_id:
