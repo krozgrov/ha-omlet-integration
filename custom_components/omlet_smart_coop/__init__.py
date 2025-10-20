@@ -125,7 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             except Exception:
                 pass
     except Exception as ex:
-        _LOGGER.error("Failed to set up webhook: %s", ex)
+        _LOGGER.exception("Failed to set up webhook: %r", ex)
 
     # Register services
     try:
@@ -240,7 +240,7 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
 
             hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", current_id, _handle_webhook)
             webhook_url = hass_webhook.async_generate_url(hass, current_id)
-            _LOGGER.info("Webhook enabled. URL: %s", webhook_url)
+            _LOGGER.info("Webhook enabled (enabled=%s, id=%s). URL: %s", enabled, current_id, webhook_url)
             try:
                 pn.async_create(
                     hass,
@@ -257,4 +257,4 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
             except Exception:
                 pass
     except Exception as ex:
-        _LOGGER.warning("Webhook option update handling failed: %s", ex)
+        _LOGGER.exception("Webhook option update handling failed: %r", ex)
