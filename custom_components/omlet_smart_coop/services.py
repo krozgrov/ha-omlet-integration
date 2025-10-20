@@ -34,8 +34,10 @@ from .const import (
     ATTR_POLL_MODE,
     POLL_MODE_RESPONSIVE,
     POLL_MODE_POWER_SAVINGS,
+    POLL_MODE_NOTIFICATIONS_ONLY,
     POLL_FREQ_RESPONSIVE,
     POLL_FREQ_POWER_SAVINGS,
+    POLL_FREQ_NOTIFICATIONS_ONLY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -329,6 +331,8 @@ async def async_register_services(
                 poll_freq = POLL_FREQ_RESPONSIVE
             elif poll_mode == POLL_MODE_POWER_SAVINGS:
                 poll_freq = POLL_FREQ_POWER_SAVINGS
+            elif poll_mode == POLL_MODE_NOTIFICATIONS_ONLY:
+                poll_freq = POLL_FREQ_NOTIFICATIONS_ONLY
             else:
                 poll_mode = POLL_MODE_POWER_SAVINGS
                 poll_freq = POLL_FREQ_POWER_SAVINGS

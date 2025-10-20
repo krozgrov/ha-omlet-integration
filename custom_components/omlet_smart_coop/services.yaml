@@ -97,6 +97,7 @@ update_overnight_sleep:
           options:
             - responsive
             - power_savings
+            - notifications_only
           mode: dropdown
 
 update_door_schedule:

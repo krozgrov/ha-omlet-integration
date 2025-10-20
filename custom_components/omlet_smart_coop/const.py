@@ -41,8 +41,10 @@ ATTR_CLOSE_DELAY = "close_delay"
 ATTR_POLL_MODE = "poll_mode"
 POLL_MODE_RESPONSIVE = "responsive"
 POLL_MODE_POWER_SAVINGS = "power_savings"
+POLL_MODE_NOTIFICATIONS_ONLY = "notifications_only"
 POLL_FREQ_RESPONSIVE = 120
 POLL_FREQ_POWER_SAVINGS = 600
+POLL_FREQ_NOTIFICATIONS_ONLY = 86400
 
 # Valid Modes
 VALID_DOOR_MODES = ["time", "light", "manual"]
