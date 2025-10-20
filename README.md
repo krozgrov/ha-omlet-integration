@@ -37,11 +37,15 @@ A lot of effort is going into this integration. So if you can afford it and want
 3. Restart Home Assistant.
 
 ### Using HACS
-1. Add this repository as a custom repository in HACS.
-2. Repository - https://github.com/krozgrov/ha-omlet-integration
-3. Type - Integration
-4. Search for **Omlet Smart Coop** and select current Release and Download.
-5. Restart Home Assistant.
+- Recommended: Install directly from HACS (no custom repository needed)
+  1. In Home Assistant, open HACS → Integrations.
+  2. Search for "Omlet Smart Coop" and select it.
+  3. Install the latest release and restart Home Assistant when prompted.
+
+- Alternative (only if you don’t see it listed):
+  1. In HACS, add this repository as a Custom Repository.
+  2. URL: https://github.com/krozgrov/ha-omlet-integration, Type: Integration.
+  3. Then search for "Omlet Smart Coop", install, and restart.
 
 ## Configuration
 
