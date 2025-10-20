@@ -24,6 +24,7 @@ from aiohttp.web import Response
 import secrets
 from homeassistant.helpers.network import get_url
 import time
+from homeassistant.helpers import entity_registry as er
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -58,6 +59,54 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Store the coordinator in hass.data
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
+
+    # One-time entity registry migration: stable unique_id for light/cover
+    try:
+        if not entry.data.get("unique_id_migrated_v1"):
+            ent_reg = er.async_get(hass)
+            reg_entries = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+            for reg_entry in reg_entries:
+                if reg_entry.platform != DOMAIN:
+                    continue
+                if reg_entry.domain not in ("light", "cover"):
+                    continue
+                uid = reg_entry.unique_id or ""
+                for suffix in ("_light", "_door"):
+                    if uid.endswith(suffix):
+                        base = uid[: -len(suffix)]
+                        # Old pattern: <device_id>_<sanitized_name><suffix>
+                        if "_" in base:
+                            new_base = base.rsplit("_", 1)[0]
+                            new_uid = f"{new_base}{suffix}"
+                            if new_uid != uid:
+                                # Skip if target unique_id already exists
+                                existing = ent_reg.async_get_entity_id(
+                                    reg_entry.domain, DOMAIN, new_uid
+                                )
+                                if existing is None:
+                                    ent_reg.async_update_entity(
+                                        reg_entry.entity_id, new_unique_id=new_uid
+                                    )
+                                    _LOGGER.info(
+                                        "Migrated unique_id for %s from %s to %s",
+                                        reg_entry.entity_id,
+                                        uid,
+                                        new_uid,
+                                    )
+                                else:
+                                    _LOGGER.warning(
+                                        "Skip unique_id migration for %s; new id %s already bound to %s",
+                                        reg_entry.entity_id,
+                                        new_uid,
+                                        existing,
+                                    )
+                        break
+            # Mark migration complete
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, "unique_id_migrated_v1": True}
+            )
+    except Exception as ex:
+        _LOGGER.warning("Unique_id migration skipped due to error: %r", ex)
 
     # Optionally register webhook support
     try:
