@@ -6,28 +6,66 @@ open_door:
   description: Open the coop door immediately
   target:
     entity:
-      integration: omlet_smart_coop
+      domain: cover
     device:
       integration: omlet_smart_coop
+  fields:
+    device_id:
+      name: Device
+      description: Select one or more coop devices
+      required: false
+      selector:
+        device:
+          integration: omlet_smart_coop
+          multiple: true
+    entity_id:
+      name: Door entity
+      description: Alternatively, select the coop door entity
+      required: false
+      selector:
+        entity:
+          domain: cover
 
 close_door:
   name: Close Door
   description: Close the coop door immediately
   target:
     entity:
-      integration: omlet_smart_coop
+      domain: cover
     device:
       integration: omlet_smart_coop
+  fields:
+    device_id:
+      name: Device
+      description: Select one or more coop devices
+      required: false
+      selector:
+        device:
+          integration: omlet_smart_coop
+          multiple: true
+    entity_id:
+      name: Door entity
+      description: Alternatively, select the coop door entity
+      required: false
+      selector:
+        entity:
+          domain: cover
 
 update_overnight_sleep:
   name: Update Overnight Sleep Schedule
   description: Update the overnight sleep schedule settings
   target:
-    entity:
-      integration: omlet_smart_coop
     device:
       integration: omlet_smart_coop
   fields:
+    device_id:
+      name: Device
+      description: Select one or more coop devices
+      required: false
+      selector:
+        device:
+          integration: omlet_smart_coop
+          multiple: true
     enabled:
       name: Enable Overnight Sleep
       description: Enable or disable overnight sleep mode
@@ -65,11 +103,17 @@ update_door_schedule:
   name: Update Door Schedule
   description: Update the automatic door schedule
   target:
-    entity:
-      integration: omlet_smart_coop
     device:
       integration: omlet_smart_coop
   fields:
+    device_id:
+      name: Device
+      description: Select one or more coop devices
+      required: false
+      selector:
+        device:
+          integration: omlet_smart_coop
+          multiple: true
     door_mode:
       name: Door Mode
       description: Mode for door operation (light, time, or manual)

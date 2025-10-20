@@ -45,7 +45,7 @@ async def get_integration_device_ids(
     hass: HomeAssistant, coordinator: OmletDataCoordinator, call_data: dict
 ) -> list[str]:  # Changed return type
     """Map Home Assistant device identifiers to integration device IDs."""
-    device_ids = call_data.get("device_id", [])  # Changed to default to empty list
+    device_ids = call_data.get("device_id", [])  # from target or field selector
     entity_id = call_data.get("entity_id")
     device_name = call_data.get("name")
 
@@ -54,6 +54,13 @@ async def get_integration_device_ids(
     # Ensure device_ids is a list
     if not isinstance(device_ids, list):
         device_ids = [device_ids] if device_ids else []
+
+    # Normalize entity_ids to a list
+    entity_ids: list[str] = []
+    if isinstance(entity_id, list):
+        entity_ids = entity_id
+    elif isinstance(entity_id, str) and entity_id:
+        entity_ids = [entity_id]
 
     _LOGGER.debug("Processing device IDs: %s", device_ids)
 
@@ -82,24 +89,25 @@ async def get_integration_device_ids(
                     )
                     break
 
-    # If no IDs found yet, try entity_id
-    if not integration_device_ids and entity_id:
-        try:
-            ent_reg = er.async_get(hass)
-            ent_entry = ent_reg.async_get(entity_id)
-            if ent_entry and ent_entry.device_id:
-                ha_device = device_registry.async_get(ent_entry.device_id)
-                if ha_device:
-                    serial_number = next(
-                        (entry[1] for entry in ha_device.identifiers if entry[0] == DOMAIN),
-                        None,
-                    )
-                    for dev_id, dev_data in coordinator.devices.items():
-                        if dev_data.get("deviceSerial") == serial_number:
-                            integration_device_ids.append(dev_id)
-                            break
-        except Exception as e:
-            _LOGGER.debug("Failed entity_id resolution via registry: %s", e)
+    # If no IDs found yet, try entity_id(s)
+    if not integration_device_ids and entity_ids:
+        ent_reg = er.async_get(hass)
+        for ent_id in entity_ids:
+            try:
+                ent_entry = ent_reg.async_get(ent_id)
+                if ent_entry and ent_entry.device_id:
+                    ha_device = device_registry.async_get(ent_entry.device_id)
+                    if ha_device:
+                        serial_number = next(
+                            (entry[1] for entry in ha_device.identifiers if entry[0] == DOMAIN),
+                            None,
+                        )
+                        for dev_id, dev_data in coordinator.devices.items():
+                            if dev_data.get("deviceSerial") == serial_number:
+                                integration_device_ids.append(dev_id)
+                                break
+            except Exception as e:
+                _LOGGER.debug("Failed entity_id resolution via registry for %s: %s", ent_id, e)
 
     # If still no IDs, try device name
     if not integration_device_ids and device_name:
