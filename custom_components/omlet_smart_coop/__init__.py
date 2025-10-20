@@ -16,6 +16,7 @@ from .const import (
     CONF_ENABLE_WEBHOOKS,
     CONF_WEBHOOK_ID,
     CONF_DISABLE_POLLING,
+    FIXED_WEBHOOK_ID,
 )
 from homeassistant.components import webhook as hass_webhook
 from homeassistant.components import persistent_notification as pn
@@ -58,10 +59,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Optionally register webhook support
     try:
         if entry.options.get(CONF_ENABLE_WEBHOOKS, False):
-            webhook_id = entry.data.get(CONF_WEBHOOK_ID)
-            if not webhook_id:
-                # Generate and persist a webhook id for this entry
-                webhook_id = hass_webhook.async_generate_id()
+            # Always use fixed webhook id for this integration
+            old_id = entry.data.get(CONF_WEBHOOK_ID)
+            webhook_id = FIXED_WEBHOOK_ID
+            if old_id and old_id != webhook_id:
+                try:
+                    hass_webhook.async_unregister(hass, old_id)
+                except Exception:
+                    pass
+            # Persist fixed id for clarity
+            if old_id != webhook_id:
                 hass.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
                 )
@@ -97,9 +104,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     return Response(status=500, text="error")
 
             # Register webhook in HA
-            hass_webhook.async_register(
-                hass, DOMAIN, "Omlet Smart Coop", webhook_id, _handle_webhook
-            )
+            # Ensure clean registration
+            try:
+                hass_webhook.async_unregister(hass, webhook_id)
+            except Exception:
+                pass
+            hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", webhook_id, _handle_webhook)
 
             webhook_url = hass_webhook.async_generate_url(hass, webhook_id)
             _LOGGER.info(
@@ -189,20 +199,19 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
     # Trigger a refresh of data after options update
     await coordinator.async_request_refresh()
 
-    # Handle enabling/disabling webhooks dynamically (idempotent, no hass.components access)
+    # Handle enabling/disabling webhooks dynamically (fixed id)
     try:
         enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
-        current_id = entry.data.get(CONF_WEBHOOK_ID)
+        current_id = FIXED_WEBHOOK_ID
 
         if enabled:
-            # Ensure we have an ID
-            if not current_id:
-                current_id = hass_webhook.async_generate_id()
+            # Persist fixed id for clarity
+            if entry.data.get(CONF_WEBHOOK_ID) != current_id:
                 hass.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_WEBHOOK_ID: current_id}
                 )
 
-            # Unregister if already registered (no-op if not)
+            # Unregister then register (idempotent)
             try:
                 hass_webhook.async_unregister(hass, current_id)
             except Exception:
@@ -229,9 +238,7 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                 except Exception:
                     return Response(status=500, text="error")
 
-            hass_webhook.async_register(
-                hass, DOMAIN, "Omlet Smart Coop", current_id, _handle_webhook
-            )
+            hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", current_id, _handle_webhook)
             webhook_url = hass_webhook.async_generate_url(hass, current_id)
             _LOGGER.info("Webhook enabled. URL: %s", webhook_url)
             try:
@@ -243,12 +250,11 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
             except Exception:
                 pass
         else:
-            # Disabled: unregister if we have an ID
-            if current_id:
-                try:
-                    hass_webhook.async_unregister(hass, current_id)
-                    _LOGGER.info("Webhook disabled and unregistered")
-                except Exception:
-                    pass
+            # Disabled: unregister fixed id
+            try:
+                hass_webhook.async_unregister(hass, current_id)
+                _LOGGER.info("Webhook disabled and unregistered")
+            except Exception:
+                pass
     except Exception as ex:
         _LOGGER.warning("Webhook option update handling failed: %s", ex)

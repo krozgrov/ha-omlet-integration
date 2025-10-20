@@ -53,6 +53,9 @@ CONF_WEBHOOK_ID = "webhook_id"
 CONF_WEBHOOK_TOKEN = "webhook_token"
 CONF_DISABLE_POLLING = "disable_polling"  # Webhooks-only mode
 
+# Fixed webhook identifier (results in /api/webhook/omlet_smart_coop)
+FIXED_WEBHOOK_ID = DOMAIN
+
 # Log Messages
 
 # General API Errors

@@ -126,13 +126,10 @@ async def async_register_services(
                 return
             entry = entries[0]
             enabled = entry.options.get("enable_webhooks", False)
-            webhook_id = entry.data.get("webhook_id")
-
-            if enabled and webhook_id:
-                url = hass_webhook.async_generate_url(hass, webhook_id)
+            from .const import FIXED_WEBHOOK_ID
+            if enabled:
+                url = hass_webhook.async_generate_url(hass, FIXED_WEBHOOK_ID)
                 msg = f"Webhook enabled. URL: {url}"
-            elif enabled and not webhook_id:
-                msg = "Webhooks enabled but no webhook_id yet. Toggle webhooks off/on in Options to generate one."
             else:
                 msg = "Webhooks are disabled in Options. Enable them to generate a webhook URL."
 
