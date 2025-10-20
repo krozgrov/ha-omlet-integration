@@ -23,6 +23,7 @@ A lot of effort is going into this integration. So if you can afford it and want
   <img width="414" alt="Screenshot 2024-12-29 at 4 29 21 PM" src="https://github.com/user-attachments/assets/6977606f-8a54-491c-8a00-efdff07e8cff" />
 
   - Service Calls to access funcitionality - door open/close, update power settings, and door schedules.
+  - Webhooks for real-time updates.
 
 ## Installation
 
