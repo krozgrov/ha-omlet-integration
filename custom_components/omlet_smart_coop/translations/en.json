@@ -11,11 +11,21 @@
       }
     },
     "error": {
+      "invalid_auth": "Invalid API key. Please verify and try again.",
       "cannot_connect": "Unable to connect to the Omlet API. Please check your API key.",
       "unknown": "An unknown error occurred. Please try again later."
     },
     "abort": {
       "already_configured": "This API key is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "user": {
+        "errors": {
+          "invalid_polling_interval": "Invalid polling interval. Must be between 60 and 86400 seconds."
+        }
+      }
     }
   },
   "options": {

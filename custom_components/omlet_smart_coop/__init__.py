@@ -22,6 +22,7 @@ from homeassistant.components import persistent_notification as pn
 from aiohttp.web import Response
 import secrets
 from homeassistant.helpers.network import get_url
+import time
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -79,6 +80,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             async def _handle_webhook(hass, webhook_id_recv, request):
                 """Handle incoming Omlet webhook events."""
                 try:
+                    # Debounce rapid events
+                    ts = time.monotonic()
+                    entry_bucket = hass.data[DOMAIN].setdefault(entry.entry_id, {})
+                    last = entry_bucket.get("_last_webhook_ts", 0.0)
+                    if ts - last < 1.0:
+                        return Response(status=200, text="ok")
+                    entry_bucket["_last_webhook_ts"] = ts
                     payload = None
                     try:
                         payload = await request.json()
@@ -241,6 +249,12 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
 
             async def _handle_webhook(hass, webhook_id_recv, request):
                 try:
+                    ts = time.monotonic()
+                    entry_bucket = hass.data[DOMAIN].setdefault(entry.entry_id, {})
+                    last = entry_bucket.get("_last_webhook_ts", 0.0)
+                    if ts - last < 1.0:
+                        return Response(status=200, text="ok")
+                    entry_bucket["_last_webhook_ts"] = ts
                     payload = None
                     try:
                         payload = await request.json()

@@ -7,6 +7,8 @@ open_door:
   target:
     entity:
       integration: omlet_smart_coop
+    device:
+      integration: omlet_smart_coop
 
 close_door:
   name: Close Door
@@ -14,12 +16,16 @@ close_door:
   target:
     entity:
       integration: omlet_smart_coop
+    device:
+      integration: omlet_smart_coop
 
 update_overnight_sleep:
   name: Update Overnight Sleep Schedule
   description: Update the overnight sleep schedule settings
   target:
     entity:
+      integration: omlet_smart_coop
+    device:
       integration: omlet_smart_coop
   fields:
     enabled:
@@ -60,6 +66,8 @@ update_door_schedule:
   description: Update the automatic door schedule
   target:
     entity:
+      integration: omlet_smart_coop
+    device:
       integration: omlet_smart_coop
   fields:
     door_mode:

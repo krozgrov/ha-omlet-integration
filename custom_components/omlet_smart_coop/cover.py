@@ -48,7 +48,7 @@ class OmletDoorCover(OmletEntity, CoverEntity):
         super().__init__(coordinator, device_id)
         self._attr_name = f"{device_name} Door"
         sanitized_name = device_name.lower().replace(" ", "_")
-        self.entity_id = f"cover.{sanitized_name}_door"
+        # Keep existing unique_id scheme for backward compatibility
         self._attr_unique_id = f"{device_id}_{sanitized_name}_door"
 
     @property

@@ -19,17 +19,17 @@ class OmletEntity(CoordinatorEntity):
     def device_info(self) -> DeviceInfo:
         """Return device registry information"""
         state = self._device_data.get("state", {}).get("general", {})
+        serial = self._device_data.get("deviceSerial")
+        identifier_value = serial or self._device_data.get("deviceId") or self.device_id
         return DeviceInfo(
-            identifiers={
-                (DOMAIN, self._device_data.get("deviceSerial"))
-            },  # Use deviceSerial as unique identifier
+            identifiers={(DOMAIN, identifier_value)},
             name=self._device_data.get("name"),
             manufacturer="Omlet",
             model=self._device_data.get("deviceType"),
             model_id=self._device_data.get("deviceTypeId"),
             sw_version=state.get("firmwareVersionCurrent"),
             hw_version=self.device_id,
-            serial_number=self._device_data.get("deviceSerial"),
+            serial_number=serial,
         )
 
     @property

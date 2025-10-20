@@ -2,6 +2,7 @@ from homeassistant import config_entries
 from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
 from homeassistant.core import callback
+import hashlib
 from .const import (
     DOMAIN,
     CONF_API_KEY,
@@ -74,6 +75,10 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
 
             if not errors:
+                # Prevent duplicate configuration: derive a deterministic unique_id
+                api_key_hash = hashlib.sha256(user_input[CONF_API_KEY].encode()).hexdigest()
+                await self.async_set_unique_id(api_key_hash)
+                self._abort_if_unique_id_configured()
                 # Create a new configuration entry
                 return self.async_create_entry(
                     title="Omlet Smart Coop",

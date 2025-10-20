@@ -11,6 +11,7 @@ from homeassistant.components import persistent_notification as pn
 from homeassistant.components import webhook as hass_webhook
 import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.network import get_url
 
 from .coordinator import OmletDataCoordinator
@@ -83,11 +84,22 @@ async def get_integration_device_ids(
 
     # If no IDs found yet, try entity_id
     if not integration_device_ids and entity_id:
-        entity = hass.states.get(entity_id)
-        if entity and entity.attributes.get("device_id"):
-            device_id = entity.attributes["device_id"]
-            if device_id in coordinator.devices:
-                integration_device_ids.append(device_id)
+        try:
+            ent_reg = er.async_get(hass)
+            ent_entry = ent_reg.async_get(entity_id)
+            if ent_entry and ent_entry.device_id:
+                ha_device = device_registry.async_get(ent_entry.device_id)
+                if ha_device:
+                    serial_number = next(
+                        (entry[1] for entry in ha_device.identifiers if entry[0] == DOMAIN),
+                        None,
+                    )
+                    for dev_id, dev_data in coordinator.devices.items():
+                        if dev_data.get("deviceSerial") == serial_number:
+                            integration_device_ids.append(dev_id)
+                            break
+        except Exception as e:
+            _LOGGER.debug("Failed entity_id resolution via registry: %s", e)
 
     # If still no IDs, try device name
     if not integration_device_ids and device_name:
@@ -500,5 +512,7 @@ def async_remove_services(hass: HomeAssistant) -> None:
         SERVICE_CLOSE_DOOR,
         SERVICE_UPDATE_OVERNIGHT_SLEEP,
         SERVICE_UPDATE_DOOR_SCHEDULE,
+        SERVICE_SHOW_WEBHOOK_URL,
+        "regenerate_webhook_id",
     ]:
         hass.services.async_remove(DOMAIN, service)

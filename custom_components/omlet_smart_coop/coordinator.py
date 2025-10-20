@@ -63,7 +63,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, api_key: str, config_entry) -> None:
         """Initialize the coordinator."""
         self.api_key = api_key
-        self.api_client = OmletApiClient(api_key)
+        self.api_client = OmletApiClient(api_key, hass)
         self.devices: Dict[str, Any] = {}
         self.config_entry = config_entry
         self.validation = ValidationConfig()
