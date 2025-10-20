@@ -219,7 +219,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                             _LOGGER.warning("Rejected webhook: invalid token")
                             return Response(status=401, text="invalid token")
 
-                    _LOGGER.debug("Received Omlet webhook: %s", payload)
+                    # Redacted logging: never log tokens; summarize event
+                    try:
+                        evt = (payload or {}).get("payload") or {}
+                        _LOGGER.debug(
+                            "Webhook event: device=%s param=%s old=%s new=%s",
+                            evt.get("deviceId"),
+                            evt.get("parameterName"),
+                            evt.get("oldValue"),
+                            evt.get("newValue"),
+                        )
+                    except Exception:
+                        _LOGGER.debug("Webhook event received (details redacted)")
                     # Refresh data to sync state post-event
                     await coordinator.async_request_refresh()
                     return Response(status=200, text="ok")
@@ -389,6 +400,18 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                     )
                     if expected and (not provided or provided != expected):
                         return Response(status=401, text="invalid token")
+                    # Redacted logging: summarize event without secrets
+                    try:
+                        evt = (payload or {}).get("payload") or {}
+                        _LOGGER.debug(
+                            "Webhook event: device=%s param=%s old=%s new=%s",
+                            evt.get("deviceId"),
+                            evt.get("parameterName"),
+                            evt.get("oldValue"),
+                            evt.get("newValue"),
+                        )
+                    except Exception:
+                        pass
                     await coordinator.async_request_refresh()
                     return Response(text="ok")
                 except Exception:
