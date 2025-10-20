@@ -121,3 +121,7 @@ update_door_schedule:
 show_webhook_url:
   name: Show Webhook URL
   description: Create a notification with the webhook URL and status
+
+regenerate_webhook_id:
+  name: Regenerate Webhook ID
+  description: Unregister current webhook and register a new random one. You must update the Omlet portal with the new URL.

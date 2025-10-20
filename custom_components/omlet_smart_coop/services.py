@@ -8,6 +8,7 @@ from aiohttp import ClientError
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.components import persistent_notification as pn
 from homeassistant.components import webhook as hass_webhook
+import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 
 from .coordinator import OmletDataCoordinator
@@ -18,6 +19,8 @@ from .const import (
     SERVICE_UPDATE_OVERNIGHT_SLEEP,
     SERVICE_UPDATE_DOOR_SCHEDULE,
     SERVICE_SHOW_WEBHOOK_URL,
+    CONF_WEBHOOK_ID,
+    CONF_ENABLE_WEBHOOKS,
     ATTR_ENABLED,
     ATTR_START_TIME,
     ATTR_END_TIME,
@@ -125,8 +128,8 @@ async def async_register_services(
                 _LOGGER.error("No config entries found for %s", DOMAIN)
                 return
             entry = entries[0]
-            enabled = entry.options.get("enable_webhooks", False)
-            webhook_id = entry.data.get("webhook_id")
+            enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
+            webhook_id = entry.data.get(CONF_WEBHOOK_ID)
             if enabled and webhook_id:
                 try:
                     url = hass_webhook.async_generate_url(hass, webhook_id)
@@ -405,6 +408,7 @@ async def async_register_services(
         DOMAIN, SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule
     )
     hass.services.async_register(DOMAIN, SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
+    hass.services.async_register(DOMAIN, "regenerate_webhook_id", handle_regenerate_webhook_id)
 
 
 def async_remove_services(hass: HomeAssistant) -> None:
@@ -416,3 +420,70 @@ def async_remove_services(hass: HomeAssistant) -> None:
         SERVICE_UPDATE_DOOR_SCHEDULE,
     ]:
         hass.services.async_remove(DOMAIN, service)
+    async def handle_regenerate_webhook_id(call: ServiceCall) -> None:
+        """Regenerate the webhook ID, re-register, and notify the new URL."""
+        try:
+            entries = hass.config_entries.async_entries(DOMAIN)
+            if not entries:
+                _LOGGER.error("No config entries found for %s", DOMAIN)
+                return
+            entry = entries[0]
+
+            enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
+            old_id = entry.data.get(CONF_WEBHOOK_ID)
+
+            # Unregister old id if present
+            if old_id:
+                try:
+                    hass_webhook.async_unregister(hass, old_id)
+                except Exception:
+                    pass
+
+            # Generate a shorter, random hex ID (32 chars)
+            new_id = secrets.token_hex(16)
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_WEBHOOK_ID: new_id}
+            )
+
+            url = f"/api/webhook/{new_id}"
+            if enabled:
+                # Register new webhook handler (simple refresh-only handler)
+                async def _handle_webhook(hass, webhook_id_recv, request):
+                    try:
+                        payload = None
+                        try:
+                            payload = await request.json()
+                        except Exception:
+                            pass
+                        expected = entry.options.get("webhook_token")
+                        provided = (
+                            request.headers.get("X-Omlet-Token")
+                            or (payload or {}).get("token")
+                            or (payload or {}).get("secret")
+                            or request.query.get("token")
+                        )
+                        if expected and (not provided or provided != expected):
+                            return Response(status=401, text="invalid token")
+                        await hass.data[DOMAIN][entry.entry_id]["coordinator"].async_request_refresh()
+                        return Response(text="ok")
+                    except Exception:
+                        return Response(status=500, text="error")
+
+                hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", new_id, _handle_webhook)
+                try:
+                    url = hass_webhook.async_generate_url(hass, new_id)
+                except Exception:
+                    url = f"/api/webhook/{new_id}"
+
+            msg = (
+                f"Webhook ID regenerated. New URL: {url}. Update Omlet Developer Portal."
+                if enabled
+                else f"Webhook ID regenerated (webhooks disabled). New path: {url}. Enable webhooks to register."
+            )
+            _LOGGER.info(msg)
+            try:
+                pn.async_create(hass, msg, title="Omlet Smart Coop Webhook")
+            except Exception:
+                pass
+        except Exception as err:
+            _LOGGER.error("Failed to regenerate webhook ID: %s", err)

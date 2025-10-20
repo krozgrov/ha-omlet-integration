@@ -20,6 +20,7 @@ from .const import (
 from homeassistant.components import webhook as hass_webhook
 from homeassistant.components import persistent_notification as pn
 from aiohttp.web import Response
+import secrets
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -68,7 +69,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     pass
                 webhook_id = None
             if not webhook_id:
-                webhook_id = hass_webhook.async_generate_id()
+                # Generate a shorter, random hex ID (32 chars; 128-bit entropy)
+                webhook_id = secrets.token_hex(16)
                 hass.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
                 )
@@ -216,7 +218,8 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                     hass_webhook.async_unregister(hass, DOMAIN)
                 except Exception:
                     pass
-                current_id = hass_webhook.async_generate_id()
+                # Generate a shorter, random hex ID (32 chars)
+                current_id = secrets.token_hex(16)
                 hass.config_entries.async_update_entry(
                     entry, data={**entry.data, CONF_WEBHOOK_ID: current_id}
                 )
