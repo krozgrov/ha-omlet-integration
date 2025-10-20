@@ -6,6 +6,8 @@ open_door:
   description: Open the coop door immediately
   target:
     entity:
+      domain: cover
+    device:
       integration: omlet_smart_coop
 
 close_door:
@@ -13,13 +15,15 @@ close_door:
   description: Close the coop door immediately
   target:
     entity:
+      domain: cover
+    device:
       integration: omlet_smart_coop
 
 update_overnight_sleep:
   name: Update Overnight Sleep Schedule
   description: Update the overnight sleep schedule settings
   target:
-    entity:
+    device:
       integration: omlet_smart_coop
   fields:
     enabled:
@@ -51,15 +55,19 @@ update_overnight_sleep:
       selector:
         select:
           options:
-            - responsive
-            - power_savings
+            - label: Responsive
+              value: responsive
+            - label: Notifications + Control
+              value: power_savings
+            - label: Notifications Only
+              value: notifications_only
           mode: dropdown
 
 update_door_schedule:
   name: Update Door Schedule
   description: Update the automatic door schedule
   target:
-    entity:
+    device:
       integration: omlet_smart_coop
   fields:
     door_mode:
@@ -116,3 +124,12 @@ update_door_schedule:
         number:
           min: 0
           max: 60
+
+# Utility Services
+show_webhook_url:
+  name: Show Webhook URL
+  description: Create a notification with the webhook URL and status
+
+regenerate_webhook_id:
+  name: Regenerate Webhook ID
+  description: Unregister current webhook and register a new random one. You must update the Omlet portal with the new URL.

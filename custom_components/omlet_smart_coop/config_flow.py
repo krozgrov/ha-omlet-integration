@@ -2,11 +2,15 @@ from homeassistant import config_entries
 from homeassistant.exceptions import HomeAssistantError
 import voluptuous as vol
 from homeassistant.core import callback
+import hashlib
 from .const import (
     DOMAIN,
     CONF_API_KEY,
     CONF_POLLING_INTERVAL,
     CONF_DEFAULT_POLLING_INTERVAL,
+    CONF_ENABLE_WEBHOOKS,
+    CONF_WEBHOOK_TOKEN,
+    CONF_DISABLE_POLLING,
 )
 from .api_client import OmletApiClient
 
@@ -71,6 +75,10 @@ class OmletConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "unknown"
 
             if not errors:
+                # Prevent duplicate configuration: derive a deterministic unique_id
+                api_key_hash = hashlib.sha256(user_input[CONF_API_KEY].encode()).hexdigest()
+                await self.async_set_unique_id(api_key_hash)
+                self._abort_if_unique_id_configured()
                 # Create a new configuration entry
                 return self.async_create_entry(
                     title="Omlet Smart Coop",
@@ -172,7 +180,16 @@ class OmletOptionsFlowHandler(config_entries.OptionsFlow):
                     vol.Optional(
                         CONF_POLLING_INTERVAL, default=current_interval
                     ): vol.All(vol.Coerce(int), vol.Range(min=60, max=86400)),
+                    vol.Optional(CONF_ENABLE_WEBHOOKS, default=self._get_current_option(config_entry, CONF_ENABLE_WEBHOOKS, False)): bool,
+                    vol.Optional(CONF_WEBHOOK_TOKEN, default=self._get_current_option(config_entry, CONF_WEBHOOK_TOKEN, "")): str,
+                    vol.Optional(CONF_DISABLE_POLLING, default=self._get_current_option(config_entry, CONF_DISABLE_POLLING, False)): bool,
                 }
             ),
             errors=errors,
         )
+
+    def _get_current_option(self, config_entry, key, default):
+        try:
+            return config_entry.options.get(key, default)
+        except Exception:
+            return default

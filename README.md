@@ -66,6 +66,25 @@ Key API endpoints used:
 - `/device/{deviceId}/action/{action}` - Trigger device actions.
 - `/device/{deviceId}/configuration` - Trigger updates
 
+## Webhooks (Real‑Time Updates)
+
+You can enable real‑time updates using Omlet webhooks so Home Assistant receives state changes immediately (no need to wait for polling).
+
+Steps:
+- Ensure your Home Assistant instance is reachable from the internet (Home Assistant Cloud or a configured external URL).
+- In the integration Options, enable “Enable webhooks” and (optionally) set a `webhook_token` for verification.
+- When enabled, the integration registers a random webhook endpoint and shows the full URL in a Home Assistant notification. You can also call the service `omlet_smart_coop.show_webhook_url` to display it again.
+- In the Omlet Developer Portal, visit “Manage Webhooks” and create a webhook pointing to your HA’s public URL shown by the integration.
+  - If you set a `webhook_token` in the integration, enter the same token in the portal so the integration can validate incoming requests.
+  - Select the events you want to receive (e.g., door opened/closed, light state changes).
+
+Notes:
+- When Home Assistant receives a webhook, the integration immediately refreshes device state via the Omlet API to ensure entities reflect the latest values.
+- You can choose between legacy polling and webhooks-only mode:
+  - Legacy polling: leave "Disable polling" turned OFF (default) and set your preferred polling interval.
+  - Webhooks only: turn ON "Disable polling" in Options to stop periodic polling and rely on push updates.
+  - If you disable webhooks in Options, the integration unregisters its local webhook handler and falls back to polling.
+
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

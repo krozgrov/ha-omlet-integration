@@ -4,9 +4,15 @@ from __future__ import annotations
 import logging
 from typing import Any
 from aiohttp import ClientError
+from aiohttp.web import Response
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.components import persistent_notification as pn
+from homeassistant.components import webhook as hass_webhook
+import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.network import get_url
 
 from .coordinator import OmletDataCoordinator
 from .const import (
@@ -15,6 +21,10 @@ from .const import (
     SERVICE_CLOSE_DOOR,
     SERVICE_UPDATE_OVERNIGHT_SLEEP,
     SERVICE_UPDATE_DOOR_SCHEDULE,
+    SERVICE_SHOW_WEBHOOK_URL,
+    CONF_WEBHOOK_ID,
+    CONF_ENABLE_WEBHOOKS,
+    CONF_WEBHOOK_NOTIFIED_ID,
     ATTR_ENABLED,
     ATTR_START_TIME,
     ATTR_END_TIME,
@@ -25,8 +35,10 @@ from .const import (
     ATTR_POLL_MODE,
     POLL_MODE_RESPONSIVE,
     POLL_MODE_POWER_SAVINGS,
+    POLL_MODE_NOTIFICATIONS_ONLY,
     POLL_FREQ_RESPONSIVE,
     POLL_FREQ_POWER_SAVINGS,
+    POLL_FREQ_NOTIFICATIONS_ONLY,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -34,9 +46,10 @@ _LOGGER = logging.getLogger(__name__)
 
 async def get_integration_device_ids(
     hass: HomeAssistant, coordinator: OmletDataCoordinator, call_data: dict
-) -> list[str]:  # Changed return type
+) -> list[str]:
     """Map Home Assistant device identifiers to integration device IDs."""
-    device_ids = call_data.get("device_id", [])  # Changed to default to empty list
+    # Read from call data (HA injects target refs into device_id/entity_id)
+    device_ids = call_data.get("device_id", [])
     entity_id = call_data.get("entity_id")
     device_name = call_data.get("name")
 
@@ -45,6 +58,13 @@ async def get_integration_device_ids(
     # Ensure device_ids is a list
     if not isinstance(device_ids, list):
         device_ids = [device_ids] if device_ids else []
+
+    # Normalize entity_ids to a list
+    entity_ids: list[str] = []
+    if isinstance(entity_id, list):
+        entity_ids = entity_id
+    elif isinstance(entity_id, str) and entity_id:
+        entity_ids = [entity_id]
 
     _LOGGER.debug("Processing device IDs: %s", device_ids)
 
@@ -73,13 +93,25 @@ async def get_integration_device_ids(
                     )
                     break
 
-    # If no IDs found yet, try entity_id
-    if not integration_device_ids and entity_id:
-        entity = hass.states.get(entity_id)
-        if entity and entity.attributes.get("device_id"):
-            device_id = entity.attributes["device_id"]
-            if device_id in coordinator.devices:
-                integration_device_ids.append(device_id)
+    # If no IDs found yet, try entity_id(s)
+    if not integration_device_ids and entity_ids:
+        ent_reg = er.async_get(hass)
+        for ent_id in entity_ids:
+            try:
+                ent_entry = ent_reg.async_get(ent_id)
+                if ent_entry and ent_entry.device_id:
+                    ha_device = device_registry.async_get(ent_entry.device_id)
+                    if ha_device:
+                        serial_number = next(
+                            (entry[1] for entry in ha_device.identifiers if entry[0] == DOMAIN),
+                            None,
+                        )
+                        for dev_id, dev_data in coordinator.devices.items():
+                            if dev_data.get("deviceSerial") == serial_number:
+                                integration_device_ids.append(dev_id)
+                                break
+            except Exception as e:
+                _LOGGER.debug("Failed entity_id resolution via registry for %s: %s", ent_id, e)
 
     # If still no IDs, try device name
     if not integration_device_ids and device_name:
@@ -112,6 +144,125 @@ async def async_register_services(
     hass: HomeAssistant, coordinator: OmletDataCoordinator
 ) -> None:
     """Register services for Omlet Smart Coop."""
+
+    async def handle_show_webhook_url(call: ServiceCall) -> None:
+        """Show the webhook URL and status via notification and log."""
+        try:
+            # Assume single entry for this domain
+            entries = hass.config_entries.async_entries(DOMAIN)
+            if not entries:
+                _LOGGER.error("No config entries found for %s", DOMAIN)
+                return
+            entry = entries[0]
+            enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
+            webhook_id = entry.data.get(CONF_WEBHOOK_ID)
+            if enabled and webhook_id:
+                try:
+                    url = hass_webhook.async_generate_url(hass, webhook_id)
+                except Exception as gen_err:
+                    try:
+                        base = get_url(hass)
+                        url = f"{base}/api/webhook/{webhook_id}"
+                    except Exception as url_err:
+                        url = f"/api/webhook/{webhook_id}"
+                        _LOGGER.debug(
+                            "Falling back to path-only webhook URL in service. generate_url=%r, get_url=%r",
+                            gen_err,
+                            url_err,
+                        )
+                msg = f"Webhook enabled. URL: {url}"
+            elif enabled and not webhook_id:
+                msg = "Webhooks enabled but no webhook_id yet. Toggle webhooks off/on in Options to generate one."
+            else:
+                msg = "Webhooks are disabled in Options. Enable them to generate a webhook URL."
+
+            _LOGGER.info(msg)
+            try:
+                pn.async_create(hass, msg, title="Omlet Smart Coop Webhook")
+            except Exception:  # ignore notification failures
+                pass
+        except Exception as err:
+            _LOGGER.error("Failed to show webhook URL: %s", err)
+
+    async def handle_regenerate_webhook_id(call: ServiceCall) -> None:
+        """Regenerate the webhook ID, re-register, and notify the new URL."""
+        try:
+            entries = hass.config_entries.async_entries(DOMAIN)
+            if not entries:
+                _LOGGER.error("No config entries found for %s", DOMAIN)
+                return
+            entry = entries[0]
+
+            enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
+            old_id = entry.data.get(CONF_WEBHOOK_ID)
+
+            # Unregister old id if present
+            if old_id:
+                try:
+                    hass_webhook.async_unregister(hass, old_id)
+                except Exception:
+                    pass
+
+            # Generate a shorter, random hex ID (32 chars)
+            new_id = secrets.token_hex(16)
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_WEBHOOK_ID: new_id}
+            )
+
+            url = f"/api/webhook/{new_id}"
+            if enabled:
+                # Register new webhook handler (simple refresh-only handler)
+                async def _handle_webhook(hass, webhook_id_recv, request):
+                    try:
+                        payload = None
+                        try:
+                            payload = await request.json()
+                        except Exception:
+                            pass
+                        expected = entry.options.get("webhook_token")
+                        provided = (
+                            request.headers.get("X-Omlet-Token")
+                            or (payload or {}).get("token")
+                            or (payload or {}).get("secret")
+                            or request.query.get("token")
+                        )
+                        if expected and (not provided or provided != expected):
+                            return Response(status=401, text="invalid token")
+                        await hass.data[DOMAIN][entry.entry_id]["coordinator"].async_request_refresh()
+                        return Response(text="ok")
+                    except Exception:
+                        return Response(status=500, text="error")
+
+                hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", new_id, _handle_webhook)
+                try:
+                    url = hass_webhook.async_generate_url(hass, new_id)
+                except Exception as gen_err:
+                    try:
+                        base = get_url(hass)
+                        url = f"{base}/api/webhook/{new_id}"
+                    except Exception:
+                        url = f"/api/webhook/{new_id}"
+
+            msg = (
+                f"Webhook ID regenerated. New URL: {url}. Update Omlet Developer Portal."
+                if enabled
+                else f"Webhook ID regenerated (webhooks disabled). New path: {url}. Enable webhooks to register."
+            )
+            _LOGGER.info(msg)
+            try:
+                pn.async_create(hass, msg, title="Omlet Smart Coop Webhook")
+            except Exception:
+                pass
+            # Mark that we've notified for this webhook id
+            try:
+                hass.config_entries.async_update_entry(
+                    entry,
+                    data={**entry.data, CONF_WEBHOOK_ID: new_id, CONF_WEBHOOK_NOTIFIED_ID: new_id},
+                )
+            except Exception:
+                pass
+        except Exception as err:
+            _LOGGER.error("Failed to regenerate webhook ID: %s", err)
 
     async def handle_open_door(call: ServiceCall) -> None:
         """Handle the open door service call."""
@@ -190,6 +341,8 @@ async def async_register_services(
                 poll_freq = POLL_FREQ_RESPONSIVE
             elif poll_mode == POLL_MODE_POWER_SAVINGS:
                 poll_freq = POLL_FREQ_POWER_SAVINGS
+            elif poll_mode == POLL_MODE_NOTIFICATIONS_ONLY:
+                poll_freq = POLL_FREQ_NOTIFICATIONS_ONLY
             else:
                 poll_mode = POLL_MODE_POWER_SAVINGS
                 poll_freq = POLL_FREQ_POWER_SAVINGS
@@ -370,6 +523,8 @@ async def async_register_services(
     hass.services.async_register(
         DOMAIN, SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule
     )
+    hass.services.async_register(DOMAIN, SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
+    hass.services.async_register(DOMAIN, "regenerate_webhook_id", handle_regenerate_webhook_id)
 
 
 def async_remove_services(hass: HomeAssistant) -> None:
@@ -379,5 +534,7 @@ def async_remove_services(hass: HomeAssistant) -> None:
         SERVICE_CLOSE_DOOR,
         SERVICE_UPDATE_OVERNIGHT_SLEEP,
         SERVICE_UPDATE_DOOR_SCHEDULE,
+        SERVICE_SHOW_WEBHOOK_URL,
+        "regenerate_webhook_id",
     ]:
         hass.services.async_remove(DOMAIN, service)

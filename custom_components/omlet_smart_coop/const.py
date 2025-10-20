@@ -25,6 +25,7 @@ SERVICE_OPEN_DOOR = "open_door"
 SERVICE_CLOSE_DOOR = "close_door"
 SERVICE_UPDATE_OVERNIGHT_SLEEP = "update_overnight_sleep"
 SERVICE_UPDATE_DOOR_SCHEDULE = "update_door_schedule"
+SERVICE_SHOW_WEBHOOK_URL = "show_webhook_url"
 
 # Service Fields/Attributes
 ATTR_ENABLED = "enabled"
@@ -40,11 +41,22 @@ ATTR_CLOSE_DELAY = "close_delay"
 ATTR_POLL_MODE = "poll_mode"
 POLL_MODE_RESPONSIVE = "responsive"
 POLL_MODE_POWER_SAVINGS = "power_savings"
+POLL_MODE_NOTIFICATIONS_ONLY = "notifications_only"
 POLL_FREQ_RESPONSIVE = 120
 POLL_FREQ_POWER_SAVINGS = 600
+POLL_FREQ_NOTIFICATIONS_ONLY = 86400
 
 # Valid Modes
 VALID_DOOR_MODES = ["time", "light", "manual"]
+
+# Webhook configuration
+CONF_ENABLE_WEBHOOKS = "enable_webhooks"
+CONF_WEBHOOK_ID = "webhook_id"
+CONF_WEBHOOK_TOKEN = "webhook_token"
+CONF_DISABLE_POLLING = "disable_polling"  # Webhooks-only mode
+CONF_WEBHOOK_NOTIFIED_ID = "webhook_notified_id"  # Last webhook_id shown in notification
+CONF_WEBHOOK_TIP_SHOWN = "webhook_tip_shown"      # One-time setup tip shown
+
 
 # Log Messages
 

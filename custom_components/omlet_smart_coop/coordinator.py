@@ -4,7 +4,7 @@ from typing import Dict, Any, Set, List, Callable
 from dataclasses import dataclass, field
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from .api_client import OmletApiClient
-from .const import MIN_POLLING_INTERVAL, MAX_POLLING_INTERVAL
+from .const import MIN_POLLING_INTERVAL, MAX_POLLING_INTERVAL, CONF_DISABLE_POLLING
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,22 +63,27 @@ class OmletDataCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, api_key: str, config_entry) -> None:
         """Initialize the coordinator."""
         self.api_key = api_key
-        self.api_client = OmletApiClient(api_key)
+        self.api_client = OmletApiClient(api_key, hass)
         self.devices: Dict[str, Any] = {}
         self.config_entry = config_entry
         self.validation = ValidationConfig()
         self._unsub_refresh = None
 
-        # Validate and set the polling interval
-        refresh_interval = self._validate_polling_interval(
-            config_entry.options.get("polling_interval", 300)
-        )
+        # Validate and set the polling interval (or disable if requested)
+        if config_entry.options.get(CONF_DISABLE_POLLING, False):
+            refresh_interval = None
+        else:
+            refresh_interval = self._validate_polling_interval(
+                config_entry.options.get("polling_interval", 300)
+            )
 
         super().__init__(
             hass,
             _LOGGER,
             name="OmletDataCoordinator",
-            update_interval=timedelta(seconds=refresh_interval),
+            update_interval=(
+                None if refresh_interval is None else timedelta(seconds=refresh_interval)
+            ),
         )
 
     @property
@@ -113,8 +118,12 @@ class OmletDataCoordinator(DataUpdateCoordinator):
             return self.validation.max_polling_interval
         return interval
 
-    async def update_polling_interval(self, new_interval: int) -> None:
-        """Update the polling interval."""
+    async def update_polling_interval(self, new_interval: int | None) -> None:
+        """Update the polling interval or disable polling if None."""
+        if new_interval is None:
+            self.update_interval = None
+            _LOGGER.info("Polling disabled; webhook-only mode active")
+            return
         validated_interval = self._validate_polling_interval(new_interval)
         self.update_interval = timedelta(seconds=validated_interval)
         _LOGGER.info("Polling interval updated to %s seconds", validated_interval)
