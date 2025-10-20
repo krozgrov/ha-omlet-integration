@@ -111,7 +111,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 pass
             hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", webhook_id, _handle_webhook)
 
-            webhook_url = hass_webhook.async_generate_url(hass, webhook_id)
+            try:
+                webhook_url = hass_webhook.async_generate_url(hass, webhook_id)
+            except Exception as gen_err:
+                # Fallback to path-only if URL generation fails (e.g., no external URL configured)
+                webhook_url = f"/api/webhook/{webhook_id}"
+                _LOGGER.debug("Falling back to path-only webhook URL due to: %r", gen_err)
             _LOGGER.info(
                 "Omlet Smart Coop webhook enabled. Configure at Omlet portal to POST to: %s",
                 webhook_url,
@@ -239,7 +244,11 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                     return Response(status=500, text="error")
 
             hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", current_id, _handle_webhook)
-            webhook_url = hass_webhook.async_generate_url(hass, current_id)
+            try:
+                webhook_url = hass_webhook.async_generate_url(hass, current_id)
+            except Exception as gen_err:
+                webhook_url = f"/api/webhook/{current_id}"
+                _LOGGER.debug("Falling back to path-only webhook URL due to: %r", gen_err)
             _LOGGER.info("Webhook enabled (enabled=%s, id=%s). URL: %s", enabled, current_id, webhook_url)
             try:
                 pn.async_create(

@@ -128,7 +128,11 @@ async def async_register_services(
             enabled = entry.options.get("enable_webhooks", False)
             from .const import FIXED_WEBHOOK_ID
             if enabled:
-                url = hass_webhook.async_generate_url(hass, FIXED_WEBHOOK_ID)
+                try:
+                    url = hass_webhook.async_generate_url(hass, FIXED_WEBHOOK_ID)
+                except Exception as gen_err:
+                    url = f"/api/webhook/{FIXED_WEBHOOK_ID}"
+                    _LOGGER.debug("Falling back to path-only webhook URL in service due to: %r", gen_err)
                 msg = f"Webhook enabled. URL: {url}"
             else:
                 msg = "Webhooks are disabled in Options. Enable them to generate a webhook URL."
