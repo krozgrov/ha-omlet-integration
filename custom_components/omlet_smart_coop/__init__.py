@@ -60,7 +60,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Store the coordinator in hass.data
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
 
-    # One-time entity registry migration: stable unique_id for light/cover
+    # One-time entity registry migration: stable unique_id for light/cover (v1)
     try:
         if not entry.data.get("unique_id_migrated_v1"):
             ent_reg = er.async_get(hass)
@@ -106,7 +106,52 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 entry, data={**entry.data, "unique_id_migrated_v1": True}
             )
     except Exception as ex:
-        _LOGGER.warning("Unique_id migration skipped due to error: %r", ex)
+        _LOGGER.warning("Unique_id migration v1 skipped due to error: %r", ex)
+
+    # Follow-up migration (v2): ensure we strip any name segments fully,
+    # leaving only {deviceId}_light / {deviceId}_door even when names include underscores
+    try:
+        if not entry.data.get("unique_id_migrated_v2"):
+            ent_reg = er.async_get(hass)
+            reg_entries = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+            for reg_entry in reg_entries:
+                if reg_entry.platform != DOMAIN or reg_entry.domain not in ("light", "cover"):
+                    continue
+                uid = reg_entry.unique_id or ""
+                for suffix in ("_light", "_door"):
+                    if not uid.endswith(suffix):
+                        continue
+                    base = uid[: -len(suffix)]
+                    if "_" not in base:
+                        # Already in the {deviceId}{suffix} form
+                        continue
+                    # Take deviceId as the prefix up to the first underscore
+                    device_id_prefix = base.split("_", 1)[0]
+                    new_uid = f"{device_id_prefix}{suffix}"
+                    if new_uid == uid:
+                        continue
+                    existing = ent_reg.async_get_entity_id(reg_entry.domain, DOMAIN, new_uid)
+                    if existing is None:
+                        ent_reg.async_update_entity(reg_entry.entity_id, new_unique_id=new_uid)
+                        _LOGGER.info(
+                            "Migrated unique_id v2 for %s from %s to %s",
+                            reg_entry.entity_id,
+                            uid,
+                            new_uid,
+                        )
+                    else:
+                        _LOGGER.warning(
+                            "Skip unique_id v2 migration for %s; new id %s already bound to %s",
+                            reg_entry.entity_id,
+                            new_uid,
+                            existing,
+                        )
+                    break
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, "unique_id_migrated_v2": True}
+            )
+    except Exception as ex:
+        _LOGGER.warning("Unique_id migration v2 skipped due to error: %r", ex)
 
     # Optionally register webhook support
     try:
