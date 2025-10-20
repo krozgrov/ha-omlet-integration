@@ -55,9 +55,12 @@ update_overnight_sleep:
       selector:
         select:
           options:
-            - responsive
-            - power_savings
-            - notifications_only
+            - label: Responsive
+              value: responsive
+            - label: Notifications + Control
+              value: power_savings
+            - label: Notifications Only
+              value: notifications_only
           mode: dropdown
 
 update_door_schedule:
