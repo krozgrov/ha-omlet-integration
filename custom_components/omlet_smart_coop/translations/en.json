@@ -4,7 +4,7 @@
     "step": {
       "user": {
         "title": "Set up Omlet Smart Coop",
-        "description": "Enter your Omlet API key to connect to the Omlet Smart Coop service.",
+        "description": "Enter your Omlet API key to connect. After setup, you can enable webhooks in Options to receive real-time updates (a full webhook URL will be shown).",
         "data": {
           "api_key": "API Key"
         }

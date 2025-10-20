@@ -55,6 +55,7 @@ CONF_WEBHOOK_ID = "webhook_id"
 CONF_WEBHOOK_TOKEN = "webhook_token"
 CONF_DISABLE_POLLING = "disable_polling"  # Webhooks-only mode
 CONF_WEBHOOK_NOTIFIED_ID = "webhook_notified_id"  # Last webhook_id shown in notification
+CONF_WEBHOOK_TIP_SHOWN = "webhook_tip_shown"      # One-time setup tip shown
 
 
 # Log Messages

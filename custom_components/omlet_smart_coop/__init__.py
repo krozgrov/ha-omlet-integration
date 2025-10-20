@@ -25,6 +25,7 @@ import secrets
 from homeassistant.helpers.network import get_url
 import time
 from homeassistant.helpers import entity_registry as er
+from .const import CONF_WEBHOOK_TIP_SHOWN
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -59,6 +60,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Store the coordinator in hass.data
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
+
+    # One-time setup tip: guide users to enable webhooks in Options
+    try:
+        if not entry.options.get(CONF_ENABLE_WEBHOOKS, False) and not entry.data.get(CONF_WEBHOOK_TIP_SHOWN):
+            pn.async_create(
+                hass,
+                (
+                    "You can enable webhooks in Options to receive real-time updates. "
+                    "When enabled, a full webhook URL will be shown and can be added in the Omlet Developer Portal."
+                ),
+                title="Omlet Smart Coop: Enable Webhooks (Optional)",
+            )
+            hass.config_entries.async_update_entry(
+                entry, data={**entry.data, CONF_WEBHOOK_TIP_SHOWN: True}
+            )
+    except Exception:
+        pass
 
     # One-time entity registry migration: stable unique_id for light/cover (v1)
     try:
