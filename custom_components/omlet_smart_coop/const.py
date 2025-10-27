@@ -10,6 +10,7 @@ PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.COVER,
     Platform.LIGHT,
+    Platform.FAN,
 ]
 
 # Configuration keys

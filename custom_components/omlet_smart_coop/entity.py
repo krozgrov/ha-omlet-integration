@@ -42,6 +42,8 @@ class OmletEntity(CoordinatorEntity):
         """Return the state attributes specific to the device."""
         connectivity = self._device_data.get("state", {}).get("connectivity", {})
         config = self._device_data.get("configuration", {})
+        fan_state = self._device_data.get("state", {}).get("fan", {})
+        fan_config = config.get("fan", {})
         attributes = {
             "device_id": self._device_data.get("deviceId"),
             "device_serial": self._device_data.get("deviceSerial"),
@@ -72,6 +74,11 @@ class OmletEntity(CoordinatorEntity):
             "door_open_mode": config.get("door", {}).get("openMode"),
             "door_close_mode": config.get("door", {}).get("closeMode"),
             "door_colour": config.get("door", {}).get("colour"),
+            "fan_state": fan_state.get("state"),
+            "fan_temperature": fan_state.get("temperature"),
+            "fan_humidity": fan_state.get("humidity"),
+            "fan_mode": fan_config.get("mode"),
+            "fan_manual_speed": fan_config.get("manualSpeed"),
             "timezone": config.get("general", {}).get("timezone"),
             "language": config.get("general", {}).get("language"),
             "uptime": self._device_data.get("state", {})

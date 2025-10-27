@@ -18,7 +18,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     lights = []
     for device_id, device_data in coordinator.data.items():
         # Light Entity
-        if "state" in device_data and "light" in device_data["state"]:
+        light_state = device_data.get("state", {}).get("light")
+        if light_state:
             lights.append(
                 OmletLight(
                     coordinator,

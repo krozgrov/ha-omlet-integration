@@ -22,7 +22,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     covers = []
     for device_id, device_data in coordinator.data.items():
         # Door Cover
-        if "state" in device_data and "door" in device_data["state"]:
+        door_state = device_data.get("state", {}).get("door")
+        if door_state:
             covers.append(
                 OmletDoorCover(
                     coordinator,

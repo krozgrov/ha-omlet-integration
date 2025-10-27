@@ -7,10 +7,7 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntityDescription,
 )
-from homeassistant.const import (
-    PERCENTAGE,
-    UnitOfTime,
-)
+from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfTime
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.helpers.typing import StateType
 from .const import DOMAIN
@@ -26,6 +23,34 @@ SENSOR_TYPES = {
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:battery",
+    ),
+    # Fan Sensors
+    "fan_state": SensorEntityDescription(
+        key="fan_state",
+        icon="mdi:fan",
+    ),
+    "fan_temperature": SensorEntityDescription(
+        key="fan_temperature",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        icon="mdi:thermometer",
+    ),
+    "fan_humidity": SensorEntityDescription(
+        key="fan_humidity",
+        device_class=SensorDeviceClass.HUMIDITY,
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:water-percent",
+    ),
+    "fan_mode": SensorEntityDescription(
+        key="fan_mode",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:cog",
+    ),
+    "fan_manual_speed": SensorEntityDescription(
+        key="fan_manual_speed",
+        native_unit_of_measurement=PERCENTAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:speedometer",
     ),
     # WiFi Sensors
     "wifi_ssid": SensorEntityDescription(
@@ -205,6 +230,16 @@ def extract_sensor_value(sensor_key, device_data):
         return config.get("light", {}).get("maxOnTime")
     if sensor_key == "light_equipped":
         return config.get("light", {}).get("equipped")
+    if sensor_key == "fan_state":
+        return state.get("fan", {}).get("state")
+    if sensor_key == "fan_temperature":
+        return state.get("fan", {}).get("temperature")
+    if sensor_key == "fan_humidity":
+        return state.get("fan", {}).get("humidity")
+    if sensor_key == "fan_mode":
+        return config.get("fan", {}).get("mode")
+    if sensor_key == "fan_manual_speed":
+        return config.get("fan", {}).get("manualSpeed")
 
     # Handle timestamps
     if sensor_key == "last_open_time":
