@@ -15,13 +15,15 @@ A lot of effort is going into this integration. So if you can afford it and want
 
 ## Features
 
-- **Device Support:** Automatically detects and adds supported Omlet device - Smart Automatic Chicken Coop Door https://www.omlet.us/smart-automatic-chicken-coop-door/.
+- **Device Support:** Automatically detects supported Omlet devices including the [Smart Automatic Chicken Coop Door](https://www.omlet.us/smart-automatic-chicken-coop-door/) and the [Smart Chicken Coop Fan](https://www.omlet.us/smart-chicken-coops/smart-chicken-coop-fan).
 
 - **Entity Creation:**
-  - Monitor battery levels, Light Levels and other configuration settings.
+  - Monitor battery levels, light levels, Wi-Fi health, and other configuration settings.
+  - View the coop fan status, ambient temperature, humidity, and configured operating mode.
 - **Actions:** Trigger actions such as:
   - Open/close the door.
   - Turn lights on/off.
+  - Turn the coop fan on/off or activate Boost mode when supported.
   <img width="804" alt="Screenshot 2024-12-29 at 3 47 54 PM" src="https://github.com/user-attachments/assets/76ad0dac-3198-4cbc-beb4-4022b8c24e25" />
   <img width="414" alt="Screenshot 2024-12-29 at 4 29 21 PM" src="https://github.com/user-attachments/assets/6977606f-8a54-491c-8a00-efdff07e8cff" />
 

@@ -207,19 +207,32 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         connectivity_fields = ["wifiStrength", "ssid", "connected"]
         door_fields = ["state", "lastOpenTime", "lastCloseTime", "fault", "lightLevel"]
         light_fields = ["state"]
+        fan_fields = ["state", "temperature", "humidity"]
 
-        return {
+        parsed_state = {
             "general": parser.extract_fields(state.get("general", {}), general_fields),
             "connectivity": parser.extract_fields(
                 state.get("connectivity", {}), connectivity_fields
             ),
-            "door": parser.extract_fields(state.get("door", {}), door_fields),
-            "light": parser.extract_fields(state.get("light", {}), light_fields),
         }
+
+        door_state = parser.extract_fields(state.get("door", {}), door_fields)
+        if door_state:
+            parsed_state["door"] = door_state
+
+        light_state = parser.extract_fields(state.get("light", {}), light_fields)
+        if light_state:
+            parsed_state["light"] = light_state
+
+        fan_state = parser.extract_fields(state.get("fan", {}), fan_fields)
+        if fan_state:
+            parsed_state["fan"] = fan_state
+
+        return parsed_state
 
     def _parse_device_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Parse device configuration data."""
-        config_fields = ["light", "door", "connectivity", "general"]
+        config_fields = ["light", "door", "fan", "connectivity", "general"]
         return {key: config.get(key, {}) for key in config_fields}
 
     def _parse_device_actions(self, actions: list) -> list:
