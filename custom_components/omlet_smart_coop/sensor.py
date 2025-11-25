@@ -170,7 +170,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     sensors = []
     for device_id, device_data in coordinator.data.items():
+        device_type = device_data.get("deviceType", "").lower()
+        
         for key, description in SENSOR_TYPES.items():
+            # Skip fan sensors for non-fan devices
+            if key.startswith("fan_") and device_type != "fan":
+                continue
+            # Skip door/light sensors for fan devices
+            if (key.startswith("door_") or key.startswith("light_") or key in ["last_open_time", "last_close_time"]) and device_type == "fan":
+                continue
+                
             value = extract_sensor_value(key, device_data)
             if value is not None:
                 sensors.append(

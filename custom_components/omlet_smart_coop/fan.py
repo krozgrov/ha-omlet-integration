@@ -17,8 +17,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     fans = []
     for device_id, device_data in coordinator.data.items():
-        fan_state = device_data.get("state", {}).get("fan")
-        if fan_state:
+        # Only create fan entities for Fan devices (deviceType == "Fan" and has fan state)
+        device_type = device_data.get("deviceType", "").lower()
+        has_fan_state = device_data.get("state", {}).get("fan")
+        if device_type == "fan" and has_fan_state:
             fans.append(OmletFan(coordinator, device_id, device_data["name"]))
 
     async_add_entities(fans)

@@ -52,9 +52,9 @@ class DataParser:
             fields: List of fields to extract
 
         Returns:
-            Dictionary containing requested fields
+            Dictionary containing requested fields (only non-None values)
         """
-        return {field: data.get(field) for field in fields}
+        return {field: data.get(field) for field in fields if data.get(field) is not None}
 
 
 class OmletDataCoordinator(DataUpdateCoordinator):
