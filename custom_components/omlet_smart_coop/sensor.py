@@ -17,12 +17,28 @@ import logging
 _LOGGER = logging.getLogger(__name__)
 
 SENSOR_TYPES = {
-    # General Device Sensors
+    # General Device Sensors (shared across device types)
     "battery_level": SensorEntityDescription(
         key="battery_level",
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
         icon="mdi:battery",
+    ),
+    "power_source": SensorEntityDescription(
+        key="power_source",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:power-plug",
+    ),
+    "uptime": SensorEntityDescription(
+        key="uptime",
+        native_unit_of_measurement=UnitOfTime.SECONDS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:timer-outline",
+    ),
+    "wifi_connected": SensorEntityDescription(
+        key="wifi_connected",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:wifi-check",
     ),
     # Fan Sensors
     "fan_state": SensorEntityDescription(
@@ -48,6 +64,26 @@ SENSOR_TYPES = {
     ),
     "fan_manual_speed": SensorEntityDescription(
         key="fan_manual_speed",
+        native_unit_of_measurement=PERCENTAGE,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:speedometer",
+    ),
+    "fan_temp_on": SensorEntityDescription(
+        key="fan_temp_on",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:thermometer-high",
+    ),
+    "fan_temp_off": SensorEntityDescription(
+        key="fan_temp_off",
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:thermometer-low",
+    ),
+    "fan_temp_speed": SensorEntityDescription(
+        key="fan_temp_speed",
         native_unit_of_measurement=PERCENTAGE,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:speedometer",
@@ -213,12 +249,19 @@ def extract_sensor_value(sensor_key, device_data):
     #                "Processing %s: state=%s, config=%s", sensor_key, state, config
     #            )
 
+    # General/shared sensors
     if sensor_key == "battery_level":
         return state.get("general", {}).get("batteryLevel")
+    if sensor_key == "power_source":
+        return state.get("general", {}).get("powerSource")
+    if sensor_key == "uptime":
+        return state.get("general", {}).get("uptime")
     if sensor_key == "wifi_ssid":
         return state.get("connectivity", {}).get("ssid")
     if sensor_key == "wifi_strength":
         return state.get("connectivity", {}).get("wifiStrength")
+    if sensor_key == "wifi_connected":
+        return state.get("connectivity", {}).get("connected")
     if sensor_key == "door_state":
         return state.get("door", {}).get("state")
     if sensor_key == "door_fault":
@@ -249,6 +292,12 @@ def extract_sensor_value(sensor_key, device_data):
         return config.get("fan", {}).get("mode")
     if sensor_key == "fan_manual_speed":
         return config.get("fan", {}).get("manualSpeed")
+    if sensor_key == "fan_temp_on":
+        return config.get("fan", {}).get("tempOn")
+    if sensor_key == "fan_temp_off":
+        return config.get("fan", {}).get("tempOff")
+    if sensor_key == "fan_temp_speed":
+        return config.get("fan", {}).get("tempSpeed")
 
     # Handle timestamps
     if sensor_key == "last_open_time":
