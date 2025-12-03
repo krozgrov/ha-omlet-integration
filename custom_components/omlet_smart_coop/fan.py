@@ -16,12 +16,19 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     _LOGGER.debug("Setting up fans for devices: %s", coordinator.data)
 
     fans = []
+    fan_action_values = {"on", "off", "boost"}
     for device_id, device_data in coordinator.data.items():
-        # Only create fan entities for Fan devices (deviceType == "Fan" and has fan state)
-        device_type = device_data.get("deviceType", "").lower()
-        has_fan_state = device_data.get("state", {}).get("fan")
-        if device_type == "fan" and has_fan_state:
-            fans.append(OmletFan(coordinator, device_id, device_data["name"]))
+        # Any device that reports fan state can expose a fan entity regardless of deviceType label
+        fan_state = device_data.get("state", {}).get("fan")
+        if not fan_state:
+            continue
+        has_fan_actions = any(
+            (action.get("actionValue") or "").lower() in fan_action_values
+            for action in device_data.get("actions", []) or []
+        )
+        if not has_fan_actions:
+            continue
+        fans.append(OmletFan(coordinator, device_id, device_data["name"]))
 
     async_add_entities(fans)
 
@@ -47,8 +54,13 @@ class OmletFan(OmletEntity, FanEntity):
 
     def _find_action(self, action_value: str) -> dict[str, Any] | None:
         actions = self._device_state().get("actions", []) or []
+        action_value = (action_value or "").lower()
         return next(
-            (action for action in actions if action.get("actionValue") == action_value),
+            (
+                action
+                for action in actions
+                if (action.get("actionValue") or "").lower() == action_value
+            ),
             None,
         )
 

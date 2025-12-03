@@ -20,17 +20,25 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     _LOGGER.debug("Setting up covers for devices: %s", coordinator.data)
 
     covers = []
+    door_action_values = {"open", "close"}
     for device_id, device_data in coordinator.data.items():
         # Door Cover
         door_state = device_data.get("state", {}).get("door")
-        if door_state:
-            covers.append(
-                OmletDoorCover(
-                    coordinator,
-                    device_id,
-                    device_data["name"],
-                )
+        if not door_state:
+            continue
+        has_door_actions = any(
+            (action.get("actionValue") or "").lower() in door_action_values
+            for action in device_data.get("actions", []) or []
+        )
+        if not has_door_actions:
+            continue
+        covers.append(
+            OmletDoorCover(
+                coordinator,
+                device_id,
+                device_data["name"],
             )
+        )
 
     async_add_entities(covers)
 
@@ -113,8 +121,13 @@ class OmletDoorCover(OmletEntity, CoverEntity):
             action: The action to execute (open/close)
         """
         device_data = self.coordinator.data.get(self.device_id, {})
+        action = (action or "").lower()
         action_url = next(
-            (a["url"] for a in device_data["actions"] if a["actionValue"] == action),
+            (
+                a["url"]
+                for a in device_data["actions"]
+                if (a.get("actionValue") or "").lower() == action
+            ),
             None,
         )
         if action_url:
