@@ -139,7 +139,7 @@ class OmletFan(OmletEntity, FanEntity):
         pct = max(0, min(100, int(percentage)))
         if pct <= 33:
             target = self._SPEED_PERCENTAGES[0]
-        elif pct <= 66:
+        elif pct <= 67:
             target = self._SPEED_PERCENTAGES[1]
         else:
             target = self._SPEED_PERCENTAGES[2]
@@ -159,6 +159,7 @@ class OmletFan(OmletEntity, FanEntity):
         """Turn the fan on."""
         # HA may call this with positional args (percentage, preset_mode), so keep
         # an explicit signature to avoid TypeError.
+        _ = kwargs
         if percentage is not None:
             await self.async_set_percentage(percentage)
 
@@ -171,6 +172,7 @@ class OmletFan(OmletEntity, FanEntity):
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the fan off."""
+        _ = kwargs
         await self._execute_action(self._ACTION_OFF)
         await self.coordinator.async_request_refresh()
 
