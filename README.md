@@ -8,23 +8,7 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 
 ## Pre-release: 2025.12.14b19
 
-- **Fix**: Smart Coop Fan toggle and speed control:
-  - `fan.turn_on` no longer errors (handles HA positional args correctly).
-  - Supports 3-speed control (low/medium/high) by setting fan Mode to Manual and updating `manualSpeed`.
-  - Fixes a boundary bug so setting 67% maps to medium speed (67), not high speed (100).
-  - Updates speed mapping to match observed Omlet values (Low=60, Medium=80, High=100) and cycles fan off/on to apply changes.
-  - Adds fan configuration entities (Mode/Speed/Timers/Thermostatic thresholds) for GUI control and automations.
-  - Improves state updates after actions/changes (treats `offpending` as still running + triggers quick follow-up refresh).
-  - Adds Omlet-domain fan config services in `services.yaml` (for automation use without needing select/time/number services).
-  - Fixes Thermostatic mode mapping (Omlet API uses `mode: temperature`).
-  - Temperature units: Temp On/Off follow your Home Assistant unit system (°F/°C).
-  - Time mode: supports up to 4 slots; added services to set/clear slots 1-4.
-  - Fan Off: if fan is in Time or Thermostatic mode, turning off switches mode to Manual and notifies (prevents auto-restart).
-  - HA UI: Off now works even when the UI uses `fan.set_percentage` with `0%`.
-  - Fan entity is now toggle-only (On/Off + Boost). Speeds are configured via configuration entities/services.
-  - Polling-only UX: fan UI updates optimistically on On/Off, with longer follow-up refreshes when webhooks are disabled.
-  - Naming: Fan mode is labeled “Thermostatic” in UI, while the service/schema uses API value `temperature`.
-  - Fixes `set_fan_thermostatic` service so it can enable Thermostatic mode even when you only provide the mode flag (no temp/speed fields).
+- **Fix**: `omlet_smart_coop.set_fan_thermostatic` can now enable Thermostatic mode (API `mode: temperature`) even when no Temp On/Off or Speed fields are provided.
 
 ## Sponsor
 
