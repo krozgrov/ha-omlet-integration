@@ -91,7 +91,14 @@ class OmletFan(OmletEntity, FanEntity):
     @property
     def supported_features(self) -> FanEntityFeature:
         """Return supported fan features."""
+        # Home Assistant gates service calls like `fan.turn_on` behind these flags.
+        # If we don't advertise TURN_ON/TURN_OFF, HA will reject the call even if
+        # async_turn_on/async_turn_off are implemented.
         features = FanEntityFeature(0)
+        if self._has_on():
+            features |= FanEntityFeature.TURN_ON
+        if self._has_off():
+            features |= FanEntityFeature.TURN_OFF
         if self._has_boost():
             features |= FanEntityFeature.PRESET_MODE
         return features
@@ -119,6 +126,12 @@ class OmletFan(OmletEntity, FanEntity):
 
     def _has_boost(self) -> bool:
         return self._find_action(self._ACTION_BOOST) is not None
+
+    def _has_on(self) -> bool:
+        return self._find_action(self._ACTION_ON) is not None
+
+    def _has_off(self) -> bool:
+        return self._find_action(self._ACTION_OFF) is not None
 
     async def _execute_action(self, action: str) -> None:
         """Execute an action on the fan."""
