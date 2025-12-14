@@ -63,6 +63,32 @@ def _fmt_time_hhmm(value: Any) -> str | None:
         return None
 
 
+def _iter_coordinators(hass: HomeAssistant) -> list[OmletDataCoordinator]:
+    """Return active coordinators for this integration."""
+    out: list[OmletDataCoordinator] = []
+    domain_bucket = hass.data.get(DOMAIN, {}) or {}
+    for entry_bucket in domain_bucket.values():
+        if isinstance(entry_bucket, dict):
+            coord = entry_bucket.get("coordinator")
+            if isinstance(coord, OmletDataCoordinator):
+                out.append(coord)
+    return out
+
+
+async def _resolve_targets(
+    hass: HomeAssistant, call_data: dict
+) -> list[tuple[OmletDataCoordinator, list[str]]]:
+    """Resolve the service call target into (coordinator, [device_ids]) pairs."""
+    results: list[tuple[OmletDataCoordinator, list[str]]] = []
+    for coord in _iter_coordinators(hass):
+        ids = await get_integration_device_ids(hass, coord, call_data, log_errors=False)
+        if ids:
+            results.append((coord, ids))
+    if not results:
+        _LOGGER.error("No matching Omlet devices found. Service call data: %s", call_data)
+    return results
+
+
 async def _fan_patch_and_refresh(
     hass: HomeAssistant,
     coordinator: OmletDataCoordinator,
@@ -90,7 +116,11 @@ async def _fan_patch_and_refresh(
 
 
 async def get_integration_device_ids(
-    hass: HomeAssistant, coordinator: OmletDataCoordinator, call_data: dict
+    hass: HomeAssistant,
+    coordinator: OmletDataCoordinator,
+    call_data: dict,
+    *,
+    log_errors: bool = True,
 ) -> list[str]:
     """Map Home Assistant device identifiers to integration device IDs."""
     # Read from call data (HA injects target refs into device_id/entity_id)
@@ -167,7 +197,10 @@ async def get_integration_device_ids(
 
     # Validate the resolved device_ids
     if not integration_device_ids:
-        _LOGGER.error("No valid device IDs found. Service call data: %s", call_data)
+        if log_errors:
+            _LOGGER.error("No valid device IDs found. Service call data: %s", call_data)
+        else:
+            _LOGGER.debug("No valid device IDs found for this coordinator")
         return []
 
     # Verify all devices exist in the coordinator
@@ -176,19 +209,32 @@ async def get_integration_device_ids(
         if device_id in coordinator.devices:
             valid_ids.append(device_id)
         else:
-            _LOGGER.error(
-                "Device ID %s not found in coordinator data. Available devices: %s",
-                device_id,
-                list(coordinator.devices.keys()),
-            )
+            if log_errors:
+                _LOGGER.error(
+                    "Device ID %s not found in coordinator data. Available devices: %s",
+                    device_id,
+                    list(coordinator.devices.keys()),
+                )
+            else:
+                _LOGGER.debug("Device ID %s not found in coordinator data", device_id)
 
     return valid_ids
 
 
 async def async_register_services(
-    hass: HomeAssistant, coordinator: OmletDataCoordinator
+    hass: HomeAssistant, coordinator: OmletDataCoordinator | None = None
 ) -> None:
     """Register services for Omlet Smart Coop."""
+    domain_bucket = hass.data.setdefault(DOMAIN, {})
+    if domain_bucket.get("_services_registered"):
+        return
+
+    async def _targets(call: ServiceCall) -> list[tuple[OmletDataCoordinator, list[str]]]:
+        """Return (coordinator, [device_ids]) for this call."""
+        if coordinator is not None:
+            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            return [(coordinator, ids)] if ids else []
+        return await _resolve_targets(hass, call.data)
 
     async def handle_show_webhook_url(call: ServiceCall) -> None:
         """Show the webhook URL and status via notification and log."""
@@ -312,27 +358,26 @@ async def async_register_services(
     async def handle_open_door(call: ServiceCall) -> None:
         """Handle the open door service call."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
-            for device_id in integration_device_ids:
-                try:
-                    await coordinator.api_client.execute_action(
-                        f"device/{device_id}/action/open"
-                    )
-                    _LOGGER.info(
-                        "Successfully opened door for device: %s",
-                        coordinator.devices[device_id]["name"],
-                    )
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to open door for device %s: %s", device_id, err
-                    )
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        await coord.api_client.execute_action(
+                            f"device/{device_id}/action/open"
+                        )
+                        _LOGGER.info(
+                            "Successfully opened door for device: %s",
+                            coord.devices[device_id]["name"],
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to open door for device %s: %s", device_id, err
+                        )
 
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except ClientError as err:
             _LOGGER.error("API error while opening door: %s", err)
@@ -342,27 +387,26 @@ async def async_register_services(
     async def handle_close_door(call: ServiceCall) -> None:
         """Handle the close door service call."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
-            for device_id in integration_device_ids:
-                try:
-                    await coordinator.api_client.execute_action(
-                        f"device/{device_id}/action/close"
-                    )
-                    _LOGGER.info(
-                        "Successfully closed door for device: %s",
-                        coordinator.devices[device_id]["name"],
-                    )
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to close door for device %s: %s", device_id, err
-                    )
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        await coord.api_client.execute_action(
+                            f"device/{device_id}/action/close"
+                        )
+                        _LOGGER.info(
+                            "Successfully closed door for device: %s",
+                            coord.devices[device_id]["name"],
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to close door for device %s: %s", device_id, err
+                        )
 
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except ClientError as err:
             _LOGGER.error("API error while closing door: %s", err)
@@ -372,10 +416,8 @@ async def async_register_services(
     async def handle_update_overnight_sleep(call: ServiceCall) -> None:
         """Handle updating overnight sleep schedule."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
             # Get configuration parameters
@@ -431,25 +473,26 @@ async def async_register_services(
                 }
             }
 
-            for device_id in integration_device_ids:
-                try:
-                    await coordinator.api_client.patch_device_configuration(
-                        device_id, updated_config
-                    )
-                    _LOGGER.info(
-                        "Successfully updated overnight sleep for device %s with start: %s, end: %s",
-                        coordinator.devices[device_id]["name"],
-                        start_time,
-                        end_time,
-                    )
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to update overnight sleep for device %s: %s",
-                        device_id,
-                        err,
-                    )
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        await coord.api_client.patch_device_configuration(
+                            device_id, updated_config
+                        )
+                        _LOGGER.info(
+                            "Successfully updated overnight sleep for device %s with start: %s, end: %s",
+                            coord.devices[device_id]["name"],
+                            start_time,
+                            end_time,
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to update overnight sleep for device %s: %s",
+                            device_id,
+                            err,
+                        )
 
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except Exception as err:
             _LOGGER.error("Failed to update overnight sleep: %s", err)
@@ -457,10 +500,8 @@ async def async_register_services(
     async def handle_update_door_schedule(call: ServiceCall) -> None:
         """Handle updating door schedule."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
             # Validate door mode
@@ -473,13 +514,12 @@ async def async_register_services(
                 )
                 return
 
-            for device_id in integration_device_ids:
-                try:
-                    # Get current configuration for this device
-                    current_config = (
-                        await coordinator.api_client.get_device_configuration(device_id)
-                    )
-                    door_config = current_config.get("door", {})
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        # Get current configuration for this device
+                        current_config = await coord.api_client.get_device_configuration(device_id)
+                        door_config = current_config.get("door", {})
 
                     # Apply door mode settings
                     door_config["openMode"] = door_mode
@@ -527,32 +567,30 @@ async def async_register_services(
                                 door_config[api_field] = call.data[service_field]
 
                     # Update configuration for this device
-                    response_data = (
-                        await coordinator.api_client.patch_device_configuration(
+                        response_data = await coord.api_client.patch_device_configuration(
                             device_id, {"door": door_config}
                         )
-                    )
 
-                    if response_data:
-                        _LOGGER.debug(
-                            "Door schedule update response for device %s: %s",
-                            coordinator.devices[device_id]["name"],
-                            response_data,
+                        if response_data:
+                            _LOGGER.debug(
+                                "Door schedule update response for device %s: %s",
+                                coord.devices[device_id]["name"],
+                                response_data,
+                            )
+
+                        _LOGGER.info(
+                            "Successfully updated door schedule for device: %s",
+                            coord.devices[device_id]["name"],
                         )
 
-                    _LOGGER.info(
-                        "Successfully updated door schedule for device: %s",
-                        coordinator.devices[device_id]["name"],
-                    )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to update door schedule for device %s: %s",
+                            device_id,
+                            err,
+                        )
 
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to update door schedule for device %s: %s",
-                        device_id,
-                        err,
-                    )
-
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except ClientError as err:
             _LOGGER.error("API error while updating door schedule: %s", err)
@@ -562,8 +600,8 @@ async def async_register_services(
     async def handle_set_fan_mode(call: ServiceCall) -> None:
         """Set fan mode (manual/time/thermostatic)."""
         try:
-            ids = await get_integration_device_ids(hass, coordinator, call.data)
-            if not ids:
+            targets = await _targets(call)
+            if not targets:
                 return
             mode = (call.data.get("mode") or "").lower()
             # Omlet uses "temperature" for thermostatic mode; accept legacy "thermostatic" too.
@@ -573,40 +611,46 @@ async def async_register_services(
                 _LOGGER.error("Invalid fan mode: %s", mode)
                 return
             apply_immediately = bool(call.data.get("apply_immediately", True))
-            for device_id in ids:
-                await _fan_patch_and_refresh(
-                    hass, coordinator, device_id, {"mode": mode}, apply_immediately=apply_immediately
-                )
+            for coord, ids in targets:
+                for device_id in ids:
+                    await _fan_patch_and_refresh(
+                        hass,
+                        coord,
+                        device_id,
+                        {"mode": mode},
+                        apply_immediately=apply_immediately,
+                    )
         except Exception as err:
             _LOGGER.error("Failed to set fan mode: %s", err)
 
     async def handle_set_fan_manual_speed(call: ServiceCall) -> None:
         """Set manual speed (forces manual mode)."""
         try:
-            ids = await get_integration_device_ids(hass, coordinator, call.data)
-            if not ids:
+            targets = await _targets(call)
+            if not targets:
                 return
             speed = (call.data.get("speed") or "").lower()
             if speed not in _FAN_SPEED_MAP:
                 _LOGGER.error("Invalid fan speed: %s", speed)
                 return
             apply_immediately = bool(call.data.get("apply_immediately", True))
-            for device_id in ids:
-                await _fan_patch_and_refresh(
-                    hass,
-                    coordinator,
-                    device_id,
-                    {"mode": "manual", "manualSpeed": _FAN_SPEED_MAP[speed]},
-                    apply_immediately=apply_immediately,
-                )
+            for coord, ids in targets:
+                for device_id in ids:
+                    await _fan_patch_and_refresh(
+                        hass,
+                        coord,
+                        device_id,
+                        {"mode": "manual", "manualSpeed": _FAN_SPEED_MAP[speed]},
+                        apply_immediately=apply_immediately,
+                    )
         except Exception as err:
             _LOGGER.error("Failed to set fan manual speed: %s", err)
 
     async def handle_set_fan_time_slot(call: ServiceCall) -> None:
         """Configure time schedule slot N (1-4) (on/off/speed)."""
         try:
-            ids = await get_integration_device_ids(hass, coordinator, call.data)
-            if not ids:
+            targets = await _targets(call)
+            if not targets:
                 return
             try:
                 slot = int(call.data.get("slot", 1))
@@ -636,18 +680,19 @@ async def async_register_services(
             if bool(call.data.get("set_mode_time", True)):
                 patch["mode"] = "time"
             apply_immediately = bool(call.data.get("apply_immediately", False))
-            for device_id in ids:
-                await _fan_patch_and_refresh(
-                    hass, coordinator, device_id, patch, apply_immediately=apply_immediately
-                )
+            for coord, ids in targets:
+                for device_id in ids:
+                    await _fan_patch_and_refresh(
+                        hass, coord, device_id, patch, apply_immediately=apply_immediately
+                    )
         except Exception as err:
             _LOGGER.error("Failed to set fan time slot: %s", err)
 
     async def handle_clear_fan_time_slot(call: ServiceCall) -> None:
         """Clear/delete time schedule slot N by setting On/Off to 00:00."""
         try:
-            ids = await get_integration_device_ids(hass, coordinator, call.data)
-            if not ids:
+            targets = await _targets(call)
+            if not targets:
                 return
             try:
                 slot = int(call.data.get("slot", 1))
@@ -659,10 +704,11 @@ async def async_register_services(
                 return
             patch = {f"timeOn{slot}": "00:00", f"timeOff{slot}": "00:00"}
             apply_immediately = bool(call.data.get("apply_immediately", False))
-            for device_id in ids:
-                await _fan_patch_and_refresh(
-                    hass, coordinator, device_id, patch, apply_immediately=apply_immediately
-                )
+            for coord, ids in targets:
+                for device_id in ids:
+                    await _fan_patch_and_refresh(
+                        hass, coord, device_id, patch, apply_immediately=apply_immediately
+                    )
         except Exception as err:
             _LOGGER.error("Failed to clear fan time slot: %s", err)
 
@@ -678,8 +724,8 @@ async def async_register_services(
     async def handle_set_fan_thermostatic(call: ServiceCall) -> None:
         """Configure thermostatic settings (temp on/off/speed)."""
         try:
-            ids = await get_integration_device_ids(hass, coordinator, call.data)
-            if not ids:
+            targets = await _targets(call)
+            if not targets:
                 return
             patch: dict[str, Any] = {}
             # Allow enabling thermostatic mode even if no other fields are provided.
@@ -710,10 +756,11 @@ async def async_register_services(
                 _LOGGER.error("No thermostatic fields provided")
                 return
             apply_immediately = bool(call.data.get("apply_immediately", False))
-            for device_id in ids:
-                await _fan_patch_and_refresh(
-                    hass, coordinator, device_id, patch, apply_immediately=apply_immediately
-                )
+            for coord, ids in targets:
+                for device_id in ids:
+                    await _fan_patch_and_refresh(
+                        hass, coord, device_id, patch, apply_immediately=apply_immediately
+                    )
         except Exception as err:
             _LOGGER.error("Failed to set fan thermostatic settings: %s", err)
 
@@ -734,6 +781,7 @@ async def async_register_services(
     hass.services.async_register(DOMAIN, "clear_fan_time_slot", handle_clear_fan_time_slot)
     hass.services.async_register(DOMAIN, "set_fan_time_slot_1", handle_set_fan_time_slot_1)
     hass.services.async_register(DOMAIN, "set_fan_thermostatic", handle_set_fan_thermostatic)
+    domain_bucket["_services_registered"] = True
 
 
 def async_remove_services(hass: HomeAssistant) -> None:
@@ -753,3 +801,7 @@ def async_remove_services(hass: HomeAssistant) -> None:
         "set_fan_thermostatic",
     ]:
         hass.services.async_remove(DOMAIN, service)
+    try:
+        hass.data.get(DOMAIN, {}).pop("_services_registered", None)
+    except Exception:
+        pass
