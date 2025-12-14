@@ -6,7 +6,7 @@
 
 An integration for Home Assistant that connects your Omlet Smart Coop devices—including the Smart Automatic Chicken Coop Door and Smart Coop Fan—enabling monitoring and control directly from Home Assistant using the Omlet official API.
 
-## Pre-release: 2025.12.14b13
+## Pre-release: 2025.12.14b14
 
 - **Fix**: Smart Coop Fan toggle and speed control:
   - `fan.turn_on` no longer errors (handles HA positional args correctly).
@@ -21,6 +21,7 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
   - Time mode: supports up to 4 slots; added services to set/clear slots 1-4.
   - Fan Off: if fan is in Time or Thermostatic mode, turning off switches mode to Manual and notifies (prevents auto-restart).
   - HA UI: Off now works even when the UI uses `fan.set_percentage` with `0%`.
+  - HA UI: Low/Medium/High now work even when the fan is currently off (non-zero `set_percentage` starts the fan).
 
 ## Sponsor
 
