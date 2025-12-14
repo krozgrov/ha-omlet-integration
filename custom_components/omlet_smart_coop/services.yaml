@@ -164,7 +164,7 @@ set_fan_mode:
             - label: Time
               value: time
             - label: Thermostatic
-              value: temperature
+              value: thermostatic
           mode: dropdown
     apply_immediately:
       name: Apply Immediately

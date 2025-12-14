@@ -305,7 +305,11 @@ def extract_sensor_value(sensor_key, device_data):
     if sensor_key == "fan_humidity":
         return state.get("fan", {}).get("humidity")
     if sensor_key == "fan_mode":
-        return config.get("fan", {}).get("mode")
+        mode = config.get("fan", {}).get("mode")
+        # Omlet uses "temperature" internally; present as "thermostatic" for UI consistency.
+        if isinstance(mode, str) and mode.lower() == "temperature":
+            return "thermostatic"
+        return mode
     if sensor_key == "fan_manual_speed":
         return config.get("fan", {}).get("manualSpeed")
     if sensor_key == "fan_temp_on":

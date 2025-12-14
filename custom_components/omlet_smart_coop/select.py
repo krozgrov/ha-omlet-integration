@@ -53,7 +53,7 @@ class OmletFanModeSelect(OmletEntity, SelectEntity):
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = "Mode"
+        self._attr_name = "Fan Mode"
         self._attr_unique_id = f"{device_id}_fan_mode"
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
