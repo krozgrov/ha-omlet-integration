@@ -177,14 +177,17 @@ class OmletFan(OmletEntity, FanEntity):
             self.device_id,
             {"fan": {"mode": "manual", "manualSpeed": target}},
         )
-        # Omlet applies manualSpeed after the fan is toggled off/on. If it is
-        # currently running, cycle it to apply the new speed.
+        # If fan is already running, Omlet applies manualSpeed after an off/on cycle.
+        # If fan is currently off, selecting a speed from HA UI should start the fan.
         if self.is_on:
             await self._execute_action(self._ACTION_OFF)
             await asyncio.sleep(0.5)
             await self._execute_action(self._ACTION_ON)
+        else:
+            await self._execute_action(self._ACTION_ON)
 
         await self.coordinator.async_request_refresh()
+        self._schedule_followup_refresh()
 
     async def async_turn_on(
         self,
@@ -196,10 +199,12 @@ class OmletFan(OmletEntity, FanEntity):
         # HA may call this with positional args (percentage, preset_mode), so keep
         # an explicit signature to avoid TypeError.
         _ = kwargs
-        if percentage is not None:
-            await self.async_set_percentage(percentage)
-
         preset = preset_mode or kwargs.get("preset_mode")
+        # If caller provided a percentage, setting it should also start the fan.
+        # Avoid sending a second ON action afterwards.
+        if percentage is not None and preset != "boost":
+            await self.async_set_percentage(percentage)
+            return
         if preset == "boost" and self._has_boost():
             await self._execute_action(self._ACTION_BOOST)
         else:
