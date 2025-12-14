@@ -1,7 +1,10 @@
 import logging
 from typing import Any
 
-from homeassistant.components.number import NumberEntity
+from homeassistant.components.number import NumberDeviceClass, NumberEntity
+from homeassistant.const import UnitOfTemperature
+from homeassistant.helpers.entity import EntityCategory
+from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import DOMAIN
 from .entity import OmletEntity
@@ -42,17 +45,32 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
         device_id: str,
         device_name: str,
         *,
-        native_min: float,
-        native_max: float,
+        native_min_c: float,
+        native_max_c: float,
         native_step: float,
     ) -> None:
         super().__init__(coordinator, device_id)
         self._attr_name = f"{device_name} {self._LABEL}"
         self._attr_unique_id = f"{device_id}_{self._CFG_KEY}"
         self._attr_has_entity_name = True
-        self._attr_native_min_value = native_min
-        self._attr_native_max_value = native_max
         self._attr_native_step = native_step
+        self._attr_device_class = NumberDeviceClass.TEMPERATURE
+        self._attr_entity_category = EntityCategory.CONFIG
+
+        # API values appear to be Celsius; expose in user's HA temperature unit.
+        self._api_unit = UnitOfTemperature.CELSIUS
+        self._display_unit = (
+            self.hass.config.units.temperature_unit
+            if getattr(self, "hass", None) is not None
+            else UnitOfTemperature.CELSIUS
+        )
+        self._attr_native_unit_of_measurement = self._display_unit
+
+        # Set min/max in the displayed unit.
+        min_v = TemperatureConverter.convert(native_min_c, self._api_unit, self._display_unit)
+        max_v = TemperatureConverter.convert(native_max_c, self._api_unit, self._display_unit)
+        self._attr_native_min_value = float(round(min_v))
+        self._attr_native_max_value = float(round(max_v))
 
     def _fan_cfg(self) -> dict[str, Any]:
         return (self.coordinator.data.get(self.device_id, {}) or {}).get("configuration", {}).get("fan", {}) or {}
@@ -61,13 +79,17 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
     def native_value(self) -> float | None:
         raw = self._fan_cfg().get(self._CFG_KEY)
         try:
-            return float(raw)
+            api_val = float(raw)
         except (TypeError, ValueError):
             return None
+        return float(
+            TemperatureConverter.convert(api_val, self._api_unit, self._display_unit)
+        )
 
     async def async_set_native_value(self, value: float) -> None:
+        api_val = TemperatureConverter.convert(value, self._display_unit, self._api_unit)
         await self.coordinator.api_client.patch_device_configuration(
-            self.device_id, {"fan": {self._CFG_KEY: int(value)}}
+            self.device_id, {"fan": {self._CFG_KEY: int(round(api_val))}}
         )
         await self.coordinator.async_request_refresh()
 
@@ -81,8 +103,8 @@ class OmletFanTempOn(_OmletFanNumberBase):
             coordinator,
             device_id,
             device_name,
-            native_min=0,
-            native_max=60,
+            native_min_c=0,
+            native_max_c=60,
             native_step=1,
         )
 
@@ -96,8 +118,8 @@ class OmletFanTempOff(_OmletFanNumberBase):
             coordinator,
             device_id,
             device_name,
-            native_min=0,
-            native_max=60,
+            native_min_c=0,
+            native_max_c=60,
             native_step=1,
         )
 

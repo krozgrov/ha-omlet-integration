@@ -272,21 +272,21 @@ set_fan_thermostatic:
           integration: omlet_smart_coop
     temp_on:
       name: Temp On
-      description: Temperature to start fan (device units)
+      description: Temperature to start fan (in your Home Assistant temperature unit)
       required: false
       selector:
         number:
           min: 0
-          max: 60
+          max: 140
           step: 1
     temp_off:
       name: Temp Off
-      description: Temperature to stop fan (device units)
+      description: Temperature to stop fan (in your Home Assistant temperature unit)
       required: false
       selector:
         number:
           min: 0
-          max: 60
+          max: 140
           step: 1
     speed:
       name: Speed

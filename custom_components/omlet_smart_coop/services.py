@@ -8,12 +8,14 @@ from aiohttp import ClientError
 from aiohttp.web import Response
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.const import UnitOfTemperature
 from homeassistant.components import persistent_notification as pn
 from homeassistant.components import webhook as hass_webhook
 import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.network import get_url
+from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .coordinator import OmletDataCoordinator
 from .const import (
@@ -653,9 +655,19 @@ async def async_register_services(
                 return
             patch: dict[str, Any] = {}
             if call.data.get("temp_on") is not None:
-                patch["tempOn"] = int(call.data["temp_on"])
+                api_val = TemperatureConverter.convert(
+                    float(call.data["temp_on"]),
+                    hass.config.units.temperature_unit,
+                    UnitOfTemperature.CELSIUS,
+                )
+                patch["tempOn"] = int(round(api_val))
             if call.data.get("temp_off") is not None:
-                patch["tempOff"] = int(call.data["temp_off"])
+                api_val = TemperatureConverter.convert(
+                    float(call.data["temp_off"]),
+                    hass.config.units.temperature_unit,
+                    UnitOfTemperature.CELSIUS,
+                )
+                patch["tempOff"] = int(round(api_val))
             speed = call.data.get("speed")
             if speed is not None:
                 speed = str(speed).lower()
