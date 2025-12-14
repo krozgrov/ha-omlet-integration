@@ -70,7 +70,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 class OmletFanModeSelect(OmletEntity, SelectEntity):
     _OPTIONS = ["Manual", "Time", "Thermostatic"]
-    _MAP = {"Manual": "manual", "Time": "time", "Thermostatic": "thermostatic"}
+    # Omlet uses mode="temperature" for thermostatic operation.
+    _MAP = {"Manual": "manual", "Time": "time", "Thermostatic": "temperature"}
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)

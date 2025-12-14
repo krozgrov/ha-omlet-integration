@@ -576,7 +576,10 @@ async def async_register_services(
             if not ids:
                 return
             mode = (call.data.get("mode") or "").lower()
-            if mode not in {"manual", "time", "thermostatic"}:
+            # Omlet uses "temperature" for thermostatic mode; accept legacy "thermostatic" too.
+            if mode == "thermostatic":
+                mode = "temperature"
+            if mode not in {"manual", "time", "temperature"}:
                 _LOGGER.error("Invalid fan mode: %s", mode)
                 return
             apply_immediately = bool(call.data.get("apply_immediately", True))
@@ -664,7 +667,7 @@ async def async_register_services(
                 _LOGGER.error("No thermostatic fields provided")
                 return
             if bool(call.data.get("set_mode_thermostatic", True)):
-                patch["mode"] = "thermostatic"
+                patch["mode"] = "temperature"
             apply_immediately = bool(call.data.get("apply_immediately", False))
             for device_id in ids:
                 await _fan_patch_and_refresh(
