@@ -33,6 +33,14 @@ async def _apply_fan_config(
                 _LOGGER.debug("Failed to cycle fan for %s: %r", device_id, err)
 
     await coordinator.async_request_refresh()
+    # Omlet can briefly report *pending* after config changes; do a quick follow-up refresh.
+    if getattr(coordinator, "hass", None):
+        async def _delayed(delay_s: float) -> None:
+            await asyncio.sleep(delay_s)
+            await coordinator.async_request_refresh()
+
+        for delay in (1.5, 5.0):
+            coordinator.hass.async_create_task(_delayed(delay))
 
 
 def _fan_devices(coordinator) -> list[tuple[str, dict[str, Any]]]:

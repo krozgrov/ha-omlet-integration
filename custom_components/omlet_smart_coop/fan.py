@@ -80,7 +80,21 @@ class OmletFan(OmletEntity, FanEntity):
     def is_on(self) -> bool:
         """Return whether the fan is running."""
         state = (self._fan_state().get("state") or "").lower()
-        return state in {"on", "onpending", "boost", "boostpending"}
+        # Treat *pending-off* as still running until the device confirms "off".
+        return state in {"on", "onpending", "boost", "boostpending", "offpending"}
+
+    def _schedule_followup_refresh(self) -> None:
+        """Poll shortly after actions since Omlet may report *pending* briefly."""
+        if not getattr(self, "hass", None):
+            return
+
+        async def _delayed(delay_s: float) -> None:
+            await asyncio.sleep(delay_s)
+            await self.coordinator.async_request_refresh()
+
+        # A couple quick follow-ups to clear pending states without waiting for next poll.
+        for delay in (1.5, 5.0):
+            self.hass.async_create_task(_delayed(delay))
 
     @property
     def preset_mode(self) -> str | None:
@@ -184,12 +198,14 @@ class OmletFan(OmletEntity, FanEntity):
         else:
             await self._execute_action(self._ACTION_ON)
         await self.coordinator.async_request_refresh()
+        self._schedule_followup_refresh()
 
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the fan off."""
         _ = kwargs
         await self._execute_action(self._ACTION_OFF)
         await self.coordinator.async_request_refresh()
+        self._schedule_followup_refresh()
 
     async def async_set_preset_mode(self, preset_mode: str) -> None:
         """Set the preset mode."""
