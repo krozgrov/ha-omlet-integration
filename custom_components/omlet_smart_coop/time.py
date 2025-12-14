@@ -7,47 +7,18 @@ from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
 from .entity import OmletEntity
+from .fan_helpers import iter_fan_devices, fan_config, parse_hhmm, format_hhmm
 
 _LOGGER = logging.getLogger(__name__)
-
-
-def _parse_hhmm(value: Any) -> dt_time | None:
-    if not value:
-        return None
-    if isinstance(value, dt_time):
-        return value
-    s = str(value)
-    if ":" not in s:
-        return None
-    try:
-        hh, mm = s.split(":", 1)
-        return dt_time(hour=int(hh), minute=int(mm))
-    except Exception:
-        return None
-
-
-def _fmt_hhmm(value: dt_time) -> str:
-    return f"{value.hour:02d}:{value.minute:02d}"
-
-
-def _fan_devices(coordinator) -> list[tuple[str, dict[str, Any]]]:
-    devices = coordinator.data or {}
-    out: list[tuple[str, dict[str, Any]]] = []
-    for device_id, device_data in devices.items():
-        state = device_data.get("state", {}) or {}
-        config = device_data.get("configuration", {}) or {}
-        if state.get("fan") or config.get("fan"):
-            out.append((device_id, device_data))
-    return out
 
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
 
     entities: list[TimeEntity] = []
-    for device_id, device_data in _fan_devices(coordinator):
+    for device_id, device_data in iter_fan_devices(coordinator):
         name = device_data.get("name") or device_id
-        fan_cfg = (device_data.get("configuration", {}) or {}).get("fan", {}) or {}
+        fan_cfg = fan_config(device_data)
 
         # Slot 1 always visible
         entities.append(OmletFanTimeOn1(coordinator, device_id, name))
@@ -89,11 +60,11 @@ class _OmletFanTimeBase(OmletEntity, TimeEntity):
 
     @property
     def native_value(self) -> dt_time | None:
-        return _parse_hhmm(self._fan_cfg().get(self._CFG_KEY))
+        return parse_hhmm(self._fan_cfg().get(self._CFG_KEY))
 
     async def async_set_value(self, value: dt_time) -> None:
         await self.coordinator.api_client.patch_device_configuration(
-            self.device_id, {"fan": {self._CFG_KEY: _fmt_hhmm(value)}}
+            self.device_id, {"fan": {self._CFG_KEY: format_hhmm(value)}}
         )
         await self.coordinator.async_request_refresh()
 

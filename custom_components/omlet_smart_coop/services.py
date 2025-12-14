@@ -18,6 +18,7 @@ from homeassistant.helpers.network import get_url
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .coordinator import OmletDataCoordinator
+from .fan_helpers import FAN_SPEED_MAP, schedule_followup_refresh
 from .const import (
     DOMAIN,
     SERVICE_OPEN_DOOR,
@@ -46,9 +47,6 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
-_FAN_SPEED_MAP = {"low": 60, "medium": 80, "high": 100}
-
-
 def _fmt_time_hhmm(value: Any) -> str | None:
     """Normalize HA time selector value into HH:MM string."""
     if value is None:
@@ -65,11 +63,6 @@ def _fmt_time_hhmm(value: Any) -> str | None:
         return None
 
 
-def _fan_is_on(device_data: dict[str, Any]) -> bool:
-    state = ((device_data.get("state") or {}).get("fan") or {}).get("state") or ""
-    return str(state).lower() in {"on", "onpending", "boost", "boostpending", "offpending"}
-
-
 async def _fan_patch_and_refresh(
     hass: HomeAssistant,
     coordinator: OmletDataCoordinator,
@@ -83,7 +76,8 @@ async def _fan_patch_and_refresh(
 
     if apply_immediately:
         device_data = coordinator.data.get(device_id, {}) or {}
-        if _fan_is_on(device_data):
+        state = ((device_data.get("state") or {}).get("fan") or {}).get("state") or ""
+        if str(state).lower() in {"on", "onpending", "boost", "boostpending", "offpending"}:
             try:
                 await coordinator.api_client.execute_action(f"device/{device_id}/action/off")
                 await asyncio.sleep(0.5)
@@ -92,13 +86,7 @@ async def _fan_patch_and_refresh(
                 _LOGGER.debug("Fan apply_immediately cycle failed for %s: %r", device_id, err)
 
     await coordinator.async_request_refresh()
-
-    async def _delayed(delay_s: float) -> None:
-        await asyncio.sleep(delay_s)
-        await coordinator.async_request_refresh()
-
-    for delay in (1.5, 5.0):
-        hass.async_create_task(_delayed(delay))
+    schedule_followup_refresh(hass, coordinator, (1.5, 5.0))
 
 
 async def get_integration_device_ids(
