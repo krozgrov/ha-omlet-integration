@@ -682,6 +682,9 @@ async def async_register_services(
             if not ids:
                 return
             patch: dict[str, Any] = {}
+            # Allow enabling thermostatic mode even if no other fields are provided.
+            if bool(call.data.get("set_mode_thermostatic", True)):
+                patch["mode"] = "temperature"
             if call.data.get("temp_on") is not None:
                 api_val = TemperatureConverter.convert(
                     float(call.data["temp_on"]),
@@ -706,8 +709,6 @@ async def async_register_services(
             if not patch:
                 _LOGGER.error("No thermostatic fields provided")
                 return
-            if bool(call.data.get("set_mode_thermostatic", True)):
-                patch["mode"] = "temperature"
             apply_immediately = bool(call.data.get("apply_immediately", False))
             for device_id in ids:
                 await _fan_patch_and_refresh(
