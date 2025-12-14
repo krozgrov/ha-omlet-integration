@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import Any
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
@@ -39,7 +40,9 @@ class OmletFan(OmletEntity, FanEntity):
     _ACTION_ON = "on"
     _ACTION_OFF = "off"
     _ACTION_BOOST = "boost"
-    _SPEED_PERCENTAGES = (33, 67, 100)  # low/medium/high (Omlet manualSpeed is 0-100)
+    # These are the actual device values observed in Omlet (manual mode).
+    # Low=60, Medium=80, High=100.
+    _MANUAL_SPEEDS = (60, 80, 100)
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
@@ -125,8 +128,13 @@ class OmletFan(OmletEntity, FanEntity):
             speed = int(raw)
         except (TypeError, ValueError):
             return None
-        # Snap to our 3-step representation
-        return min(self._SPEED_PERCENTAGES, key=lambda p: abs(p - speed))
+        # Snap to the closest known speed, then report as 33/67/100 for HA UI.
+        nearest = min(self._MANUAL_SPEEDS, key=lambda s: abs(s - speed))
+        if nearest == self._MANUAL_SPEEDS[0]:
+            return 33
+        if nearest == self._MANUAL_SPEEDS[1]:
+            return 67
+        return 100
 
     @property
     def speed_count(self) -> int:
@@ -138,16 +146,23 @@ class OmletFan(OmletEntity, FanEntity):
         # Map arbitrary percentage into 3 buckets.
         pct = max(0, min(100, int(percentage)))
         if pct <= 33:
-            target = self._SPEED_PERCENTAGES[0]
+            target = self._MANUAL_SPEEDS[0]
         elif pct <= 67:
-            target = self._SPEED_PERCENTAGES[1]
+            target = self._MANUAL_SPEEDS[1]
         else:
-            target = self._SPEED_PERCENTAGES[2]
+            target = self._MANUAL_SPEEDS[2]
 
         await self.coordinator.api_client.patch_device_configuration(
             self.device_id,
             {"fan": {"mode": "manual", "manualSpeed": target}},
         )
+        # Omlet applies manualSpeed after the fan is toggled off/on. If it is
+        # currently running, cycle it to apply the new speed.
+        if self.is_on:
+            await self._execute_action(self._ACTION_OFF)
+            await asyncio.sleep(0.5)
+            await self._execute_action(self._ACTION_ON)
+
         await self.coordinator.async_request_refresh()
 
     async def async_turn_on(
