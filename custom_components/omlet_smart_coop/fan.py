@@ -93,8 +93,8 @@ class OmletFan(OmletEntity, FanEntity):
             await asyncio.sleep(delay_s)
             await self.coordinator.async_request_refresh()
 
-        # A couple quick follow-ups to clear pending states without waiting for next poll.
-        for delay in (1.5, 5.0):
+        # A few quick follow-ups to clear pending states without waiting for next poll.
+        for delay in (1.5, 5.0, 15.0):
             self.hass.async_create_task(_delayed(delay))
 
     @property
@@ -204,20 +204,20 @@ class OmletFan(OmletEntity, FanEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the fan off."""
         _ = kwargs
-        # In temperature (thermostatic) mode the device may immediately re-enable the fan
-        # if the temperature threshold is still met. To make "turn off" behave like users
-        # expect, we first exit temperature mode by switching to manual.
+        # In temperature (thermostatic) or time mode the device may immediately re-enable
+        # the fan. To make "turn off" behave predictably, exit non-manual modes first.
         mode = (self._fan_config().get("mode") or "").lower()
-        if mode == "temperature":
+        if mode and mode != "manual":
             try:
                 await self.coordinator.api_client.patch_device_configuration(
                     self.device_id, {"fan": {"mode": "manual"}}
                 )
                 if getattr(self, "hass", None):
+                    friendly = "Thermostatic" if mode == "temperature" else "Time" if mode == "time" else mode
                     pn.async_create(
                         self.hass,
                         (
-                            "Fan was running in Thermostatic mode. Home Assistant turned the fan off and "
+                            f"Fan was running in {friendly} mode. Home Assistant turned the fan off and "
                             "switched mode to Manual so it won't automatically restart."
                         ),
                         title="Omlet Smart Coop: Fan Mode Changed",
