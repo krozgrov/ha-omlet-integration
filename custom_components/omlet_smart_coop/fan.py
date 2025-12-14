@@ -158,6 +158,12 @@ class OmletFan(OmletEntity, FanEntity):
 
     async def async_set_percentage(self, percentage: int) -> None:
         """Set fan speed (low/medium/high) by forcing manual mode + manualSpeed."""
+        # Some HA UIs/cards "turn off" by calling set_percentage(0).
+        # Treat 0% as OFF for a predictable UX.
+        if percentage is not None and int(percentage) <= 0:
+            await self.async_turn_off()
+            return
+
         # Map arbitrary percentage into 3 buckets.
         pct = max(0, min(100, int(percentage)))
         if pct <= 33:
