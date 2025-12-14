@@ -1,6 +1,7 @@
 """Services for the Omlet Smart Coop integration."""
 
 from __future__ import annotations
+import asyncio
 import logging
 from typing import Any
 from aiohttp import ClientError
@@ -42,6 +43,60 @@ from .const import (
 )
 
 _LOGGER = logging.getLogger(__name__)
+
+_FAN_SPEED_MAP = {"low": 60, "medium": 80, "high": 100}
+
+
+def _fmt_time_hhmm(value: Any) -> str | None:
+    """Normalize HA time selector value into HH:MM string."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        parts = value.split(":")
+        if len(parts) >= 2:
+            return f"{parts[0]:0>2}:{parts[1]:0>2}"
+        return None
+    # datetime.time-like
+    try:
+        return value.strftime("%H:%M")
+    except Exception:
+        return None
+
+
+def _fan_is_on(device_data: dict[str, Any]) -> bool:
+    state = ((device_data.get("state") or {}).get("fan") or {}).get("state") or ""
+    return str(state).lower() in {"on", "onpending", "boost", "boostpending", "offpending"}
+
+
+async def _fan_patch_and_refresh(
+    hass: HomeAssistant,
+    coordinator: OmletDataCoordinator,
+    device_id: str,
+    fan_patch: dict[str, Any],
+    *,
+    apply_immediately: bool = False,
+) -> None:
+    """Patch fan configuration and refresh. Optionally cycle off/on to apply immediately."""
+    await coordinator.api_client.patch_device_configuration(device_id, {"fan": fan_patch})
+
+    if apply_immediately:
+        device_data = coordinator.data.get(device_id, {}) or {}
+        if _fan_is_on(device_data):
+            try:
+                await coordinator.api_client.execute_action(f"device/{device_id}/action/off")
+                await asyncio.sleep(0.5)
+                await coordinator.api_client.execute_action(f"device/{device_id}/action/on")
+            except Exception as err:
+                _LOGGER.debug("Fan apply_immediately cycle failed for %s: %r", device_id, err)
+
+    await coordinator.async_request_refresh()
+
+    async def _delayed(delay_s: float) -> None:
+        await asyncio.sleep(delay_s)
+        await coordinator.async_request_refresh()
+
+    for delay in (1.5, 5.0):
+        hass.async_create_task(_delayed(delay))
 
 
 async def get_integration_device_ids(
@@ -514,6 +569,110 @@ async def async_register_services(
         except Exception as err:
             _LOGGER.error("Failed to update door schedule: %s", err)
 
+    async def handle_set_fan_mode(call: ServiceCall) -> None:
+        """Set fan mode (manual/time/thermostatic)."""
+        try:
+            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            if not ids:
+                return
+            mode = (call.data.get("mode") or "").lower()
+            if mode not in {"manual", "time", "thermostatic"}:
+                _LOGGER.error("Invalid fan mode: %s", mode)
+                return
+            apply_immediately = bool(call.data.get("apply_immediately", True))
+            for device_id in ids:
+                await _fan_patch_and_refresh(
+                    hass, coordinator, device_id, {"mode": mode}, apply_immediately=apply_immediately
+                )
+        except Exception as err:
+            _LOGGER.error("Failed to set fan mode: %s", err)
+
+    async def handle_set_fan_manual_speed(call: ServiceCall) -> None:
+        """Set manual speed (forces manual mode)."""
+        try:
+            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            if not ids:
+                return
+            speed = (call.data.get("speed") or "").lower()
+            if speed not in _FAN_SPEED_MAP:
+                _LOGGER.error("Invalid fan speed: %s", speed)
+                return
+            apply_immediately = bool(call.data.get("apply_immediately", True))
+            for device_id in ids:
+                await _fan_patch_and_refresh(
+                    hass,
+                    coordinator,
+                    device_id,
+                    {"mode": "manual", "manualSpeed": _FAN_SPEED_MAP[speed]},
+                    apply_immediately=apply_immediately,
+                )
+        except Exception as err:
+            _LOGGER.error("Failed to set fan manual speed: %s", err)
+
+    async def handle_set_fan_time_slot_1(call: ServiceCall) -> None:
+        """Configure time schedule slot 1 (on/off/speed)."""
+        try:
+            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            if not ids:
+                return
+            patch: dict[str, Any] = {}
+            on_time = _fmt_time_hhmm(call.data.get("on_time"))
+            off_time = _fmt_time_hhmm(call.data.get("off_time"))
+            if on_time:
+                patch["timeOn1"] = on_time
+            if off_time:
+                patch["timeOff1"] = off_time
+            speed = call.data.get("speed")
+            if speed is not None:
+                speed = str(speed).lower()
+                if speed not in _FAN_SPEED_MAP:
+                    _LOGGER.error("Invalid time slot speed: %s", speed)
+                    return
+                patch["timeSpeed1"] = _FAN_SPEED_MAP[speed]
+            if not patch:
+                _LOGGER.error("No time slot 1 fields provided")
+                return
+            if bool(call.data.get("set_mode_time", True)):
+                patch["mode"] = "time"
+            apply_immediately = bool(call.data.get("apply_immediately", False))
+            for device_id in ids:
+                await _fan_patch_and_refresh(
+                    hass, coordinator, device_id, patch, apply_immediately=apply_immediately
+                )
+        except Exception as err:
+            _LOGGER.error("Failed to set fan time slot 1: %s", err)
+
+    async def handle_set_fan_thermostatic(call: ServiceCall) -> None:
+        """Configure thermostatic settings (temp on/off/speed)."""
+        try:
+            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            if not ids:
+                return
+            patch: dict[str, Any] = {}
+            if call.data.get("temp_on") is not None:
+                patch["tempOn"] = int(call.data["temp_on"])
+            if call.data.get("temp_off") is not None:
+                patch["tempOff"] = int(call.data["temp_off"])
+            speed = call.data.get("speed")
+            if speed is not None:
+                speed = str(speed).lower()
+                if speed not in _FAN_SPEED_MAP:
+                    _LOGGER.error("Invalid thermostatic speed: %s", speed)
+                    return
+                patch["tempSpeed"] = _FAN_SPEED_MAP[speed]
+            if not patch:
+                _LOGGER.error("No thermostatic fields provided")
+                return
+            if bool(call.data.get("set_mode_thermostatic", True)):
+                patch["mode"] = "thermostatic"
+            apply_immediately = bool(call.data.get("apply_immediately", False))
+            for device_id in ids:
+                await _fan_patch_and_refresh(
+                    hass, coordinator, device_id, patch, apply_immediately=apply_immediately
+                )
+        except Exception as err:
+            _LOGGER.error("Failed to set fan thermostatic settings: %s", err)
+
     # Register all services
     hass.services.async_register(DOMAIN, SERVICE_OPEN_DOOR, handle_open_door)
     hass.services.async_register(DOMAIN, SERVICE_CLOSE_DOOR, handle_close_door)
@@ -525,6 +684,10 @@ async def async_register_services(
     )
     hass.services.async_register(DOMAIN, SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
     hass.services.async_register(DOMAIN, "regenerate_webhook_id", handle_regenerate_webhook_id)
+    hass.services.async_register(DOMAIN, "set_fan_mode", handle_set_fan_mode)
+    hass.services.async_register(DOMAIN, "set_fan_manual_speed", handle_set_fan_manual_speed)
+    hass.services.async_register(DOMAIN, "set_fan_time_slot_1", handle_set_fan_time_slot_1)
+    hass.services.async_register(DOMAIN, "set_fan_thermostatic", handle_set_fan_thermostatic)
 
 
 def async_remove_services(hass: HomeAssistant) -> None:
@@ -536,5 +699,9 @@ def async_remove_services(hass: HomeAssistant) -> None:
         SERVICE_UPDATE_DOOR_SCHEDULE,
         SERVICE_SHOW_WEBHOOK_URL,
         "regenerate_webhook_id",
+        "set_fan_mode",
+        "set_fan_manual_speed",
+        "set_fan_time_slot_1",
+        "set_fan_thermostatic",
     ]:
         hass.services.async_remove(DOMAIN, service)

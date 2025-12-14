@@ -139,3 +139,180 @@ show_webhook_url:
 regenerate_webhook_id:
   name: Regenerate Webhook ID
   description: Unregister current webhook and register a new random one. You must update the Omlet portal with the new URL.
+
+# Fan Configuration Services
+set_fan_mode:
+  name: Set Fan Mode
+  description: Set the fan operating mode (Manual, Time, Thermostatic)
+  fields:
+    device_id:
+      name: Device
+      description: The Omlet fan device to update
+      required: true
+      selector:
+        device:
+          integration: omlet_smart_coop
+    mode:
+      name: Mode
+      description: Fan mode
+      required: true
+      selector:
+        select:
+          options:
+            - label: Manual
+              value: manual
+            - label: Time
+              value: time
+            - label: Thermostatic
+              value: thermostatic
+          mode: dropdown
+    apply_immediately:
+      name: Apply Immediately
+      description: Toggle the fan off/on if currently running to apply changes immediately (recommended)
+      required: false
+      default: true
+      selector:
+        boolean: {}
+
+set_fan_manual_speed:
+  name: Set Fan Manual Speed
+  description: Set manual speed (Low/Medium/High). This forces Mode to Manual.
+  fields:
+    device_id:
+      name: Device
+      description: The Omlet fan device to update
+      required: true
+      selector:
+        device:
+          integration: omlet_smart_coop
+    speed:
+      name: Speed
+      description: Manual fan speed
+      required: true
+      selector:
+        select:
+          options:
+            - label: Low
+              value: low
+            - label: Medium
+              value: medium
+            - label: High
+              value: high
+          mode: dropdown
+    apply_immediately:
+      name: Apply Immediately
+      description: Toggle the fan off/on if currently running to apply speed immediately (recommended)
+      required: false
+      default: true
+      selector:
+        boolean: {}
+
+set_fan_time_slot_1:
+  name: Set Fan Time Schedule (Slot 1)
+  description: Configure the fan schedule for Slot 1 (On at, Off at, and Speed). Optionally forces Mode to Time.
+  fields:
+    device_id:
+      name: Device
+      description: The Omlet fan device to update
+      required: true
+      selector:
+        device:
+          integration: omlet_smart_coop
+    on_time:
+      name: On At
+      description: Time to turn on (HH:MM)
+      required: false
+      selector:
+        time: {}
+    off_time:
+      name: Off At
+      description: Time to turn off (HH:MM)
+      required: false
+      selector:
+        time: {}
+    speed:
+      name: Speed
+      description: Fan speed for this slot
+      required: false
+      selector:
+        select:
+          options:
+            - label: Low
+              value: low
+            - label: Medium
+              value: medium
+            - label: High
+              value: high
+          mode: dropdown
+    set_mode_time:
+      name: Set Mode to Time
+      description: If enabled, also sets Mode to Time
+      required: false
+      default: true
+      selector:
+        boolean: {}
+    apply_immediately:
+      name: Apply Immediately
+      description: Toggle the fan off/on if currently running to apply changes immediately
+      required: false
+      default: false
+      selector:
+        boolean: {}
+
+set_fan_thermostatic:
+  name: Set Fan Thermostatic Settings
+  description: Configure thermostatic settings (Temp On/Off and Speed). Optionally forces Mode to Thermostatic.
+  fields:
+    device_id:
+      name: Device
+      description: The Omlet fan device to update
+      required: true
+      selector:
+        device:
+          integration: omlet_smart_coop
+    temp_on:
+      name: Temp On
+      description: Temperature to start fan (device units)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+    temp_off:
+      name: Temp Off
+      description: Temperature to stop fan (device units)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 60
+          step: 1
+    speed:
+      name: Speed
+      description: Fan speed when running thermostatically
+      required: false
+      selector:
+        select:
+          options:
+            - label: Low
+              value: low
+            - label: Medium
+              value: medium
+            - label: High
+              value: high
+          mode: dropdown
+    set_mode_thermostatic:
+      name: Set Mode to Thermostatic
+      description: If enabled, also sets Mode to Thermostatic
+      required: false
+      default: true
+      selector:
+        boolean: {}
+    apply_immediately:
+      name: Apply Immediately
+      description: Toggle the fan off/on if currently running to apply changes immediately
+      required: false
+      default: false
+      selector:
+        boolean: {}
