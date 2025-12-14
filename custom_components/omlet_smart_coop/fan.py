@@ -3,6 +3,7 @@ import asyncio
 from typing import Any
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
+from homeassistant.components import persistent_notification as pn
 
 from .const import DOMAIN
 from .entity import OmletEntity
@@ -203,6 +204,26 @@ class OmletFan(OmletEntity, FanEntity):
     async def async_turn_off(self, **kwargs) -> None:
         """Turn the fan off."""
         _ = kwargs
+        # In temperature (thermostatic) mode the device may immediately re-enable the fan
+        # if the temperature threshold is still met. To make "turn off" behave like users
+        # expect, we first exit temperature mode by switching to manual.
+        mode = (self._fan_config().get("mode") or "").lower()
+        if mode == "temperature":
+            try:
+                await self.coordinator.api_client.patch_device_configuration(
+                    self.device_id, {"fan": {"mode": "manual"}}
+                )
+                if getattr(self, "hass", None):
+                    pn.async_create(
+                        self.hass,
+                        (
+                            "Fan was running in Thermostatic mode. Home Assistant turned the fan off and "
+                            "switched mode to Manual so it won't automatically restart."
+                        ),
+                        title="Omlet Smart Coop: Fan Mode Changed",
+                    )
+            except Exception as err:
+                _LOGGER.debug("Failed to switch fan mode to manual before turning off: %r", err)
         await self._execute_action(self._ACTION_OFF)
         await self.coordinator.async_request_refresh()
         self._schedule_followup_refresh()
