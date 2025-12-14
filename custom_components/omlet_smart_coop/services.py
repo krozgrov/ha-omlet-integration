@@ -614,28 +614,36 @@ async def async_register_services(
         except Exception as err:
             _LOGGER.error("Failed to set fan manual speed: %s", err)
 
-    async def handle_set_fan_time_slot_1(call: ServiceCall) -> None:
-        """Configure time schedule slot 1 (on/off/speed)."""
+    async def handle_set_fan_time_slot(call: ServiceCall) -> None:
+        """Configure time schedule slot N (1-4) (on/off/speed)."""
         try:
             ids = await get_integration_device_ids(hass, coordinator, call.data)
             if not ids:
+                return
+            try:
+                slot = int(call.data.get("slot", 1))
+            except (TypeError, ValueError):
+                _LOGGER.error("Invalid slot value: %s", call.data.get("slot"))
+                return
+            if slot not in (1, 2, 3, 4):
+                _LOGGER.error("Invalid slot (must be 1-4): %s", slot)
                 return
             patch: dict[str, Any] = {}
             on_time = _fmt_time_hhmm(call.data.get("on_time"))
             off_time = _fmt_time_hhmm(call.data.get("off_time"))
             if on_time:
-                patch["timeOn1"] = on_time
+                patch[f"timeOn{slot}"] = on_time
             if off_time:
-                patch["timeOff1"] = off_time
+                patch[f"timeOff{slot}"] = off_time
             speed = call.data.get("speed")
             if speed is not None:
                 speed = str(speed).lower()
                 if speed not in _FAN_SPEED_MAP:
                     _LOGGER.error("Invalid time slot speed: %s", speed)
                     return
-                patch["timeSpeed1"] = _FAN_SPEED_MAP[speed]
+                patch[f"timeSpeed{slot}"] = _FAN_SPEED_MAP[speed]
             if not patch:
-                _LOGGER.error("No time slot 1 fields provided")
+                _LOGGER.error("No time slot fields provided")
                 return
             if bool(call.data.get("set_mode_time", True)):
                 patch["mode"] = "time"
@@ -645,7 +653,39 @@ async def async_register_services(
                     hass, coordinator, device_id, patch, apply_immediately=apply_immediately
                 )
         except Exception as err:
-            _LOGGER.error("Failed to set fan time slot 1: %s", err)
+            _LOGGER.error("Failed to set fan time slot: %s", err)
+
+    async def handle_clear_fan_time_slot(call: ServiceCall) -> None:
+        """Clear/delete time schedule slot N by setting On/Off to 00:00."""
+        try:
+            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            if not ids:
+                return
+            try:
+                slot = int(call.data.get("slot", 1))
+            except (TypeError, ValueError):
+                _LOGGER.error("Invalid slot value: %s", call.data.get("slot"))
+                return
+            if slot not in (1, 2, 3, 4):
+                _LOGGER.error("Invalid slot (must be 1-4): %s", slot)
+                return
+            patch = {f"timeOn{slot}": "00:00", f"timeOff{slot}": "00:00"}
+            apply_immediately = bool(call.data.get("apply_immediately", False))
+            for device_id in ids:
+                await _fan_patch_and_refresh(
+                    hass, coordinator, device_id, patch, apply_immediately=apply_immediately
+                )
+        except Exception as err:
+            _LOGGER.error("Failed to clear fan time slot: %s", err)
+
+    async def handle_set_fan_time_slot_1(call: ServiceCall) -> None:
+        """Legacy alias: configure time schedule slot 1."""
+        call_data = dict(call.data)
+        call_data["slot"] = 1
+        # Reuse handler by faking a call-like object with .data
+        class _Call:
+            data = call_data
+        await handle_set_fan_time_slot(_Call())
 
     async def handle_set_fan_thermostatic(call: ServiceCall) -> None:
         """Configure thermostatic settings (temp on/off/speed)."""
@@ -701,6 +741,8 @@ async def async_register_services(
     hass.services.async_register(DOMAIN, "regenerate_webhook_id", handle_regenerate_webhook_id)
     hass.services.async_register(DOMAIN, "set_fan_mode", handle_set_fan_mode)
     hass.services.async_register(DOMAIN, "set_fan_manual_speed", handle_set_fan_manual_speed)
+    hass.services.async_register(DOMAIN, "set_fan_time_slot", handle_set_fan_time_slot)
+    hass.services.async_register(DOMAIN, "clear_fan_time_slot", handle_clear_fan_time_slot)
     hass.services.async_register(DOMAIN, "set_fan_time_slot_1", handle_set_fan_time_slot_1)
     hass.services.async_register(DOMAIN, "set_fan_thermostatic", handle_set_fan_thermostatic)
 
@@ -716,6 +758,8 @@ def async_remove_services(hass: HomeAssistant) -> None:
         "regenerate_webhook_id",
         "set_fan_mode",
         "set_fan_manual_speed",
+        "set_fan_time_slot",
+        "clear_fan_time_slot",
         "set_fan_time_slot_1",
         "set_fan_thermostatic",
     ]:
