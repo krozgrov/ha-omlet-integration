@@ -4,9 +4,11 @@ from typing import Any
 
 from homeassistant.components.fan import FanEntity, FanEntityFeature
 from homeassistant.components import persistent_notification as pn
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 from .entity import OmletEntity
+from .const import CONF_ENABLE_WEBHOOKS
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,6 +48,9 @@ class OmletFan(OmletEntity, FanEntity):
         self._attr_name = f"{device_name} Fan"
         self._attr_unique_id = f"{device_id}_fan"
         self._attr_has_entity_name = True
+        # Optimistic UI state for webhook-less installs (short-lived).
+        self._optimistic_is_on: bool | None = None
+        self._optimistic_until: float = 0.0
 
     def _device_state(self) -> dict[str, Any]:
         return self.coordinator.data.get(self.device_id, {})
@@ -76,6 +81,10 @@ class OmletFan(OmletEntity, FanEntity):
     @property
     def is_on(self) -> bool:
         """Return whether the fan is running."""
+        # If we've just issued a command, reflect it immediately in the UI while
+        # we wait for Omlet API to converge (polling-only installs).
+        if self._optimistic_is_on is not None and dt_util.utcnow().timestamp() < self._optimistic_until:
+            return self._optimistic_is_on
         state = (self._fan_state().get("state") or "").lower()
         # Treat *pending-off* as still running until the device confirms "off".
         return state in {"on", "onpending", "boost", "boostpending", "offpending"}
@@ -89,9 +98,24 @@ class OmletFan(OmletEntity, FanEntity):
             await asyncio.sleep(delay_s)
             await self.coordinator.async_request_refresh()
 
-        # A few quick follow-ups to clear pending states without waiting for next poll.
-        for delay in (1.5, 5.0, 15.0):
+        # Longer follow-ups when webhooks are disabled (polling-only installs).
+        enable_webhooks = False
+        try:
+            enable_webhooks = bool(self.coordinator.config_entry.options.get(CONF_ENABLE_WEBHOOKS, False))
+        except Exception:
+            enable_webhooks = False
+
+        delays = (1.5, 5.0) if enable_webhooks else (1.5, 5.0, 15.0, 30.0)
+        for delay in delays:
             self.hass.async_create_task(_delayed(delay))
+
+    def _set_optimistic(self, is_on: bool, *, seconds: float = 20.0) -> None:
+        self._optimistic_is_on = bool(is_on)
+        self._optimistic_until = dt_util.utcnow().timestamp() + float(seconds)
+        try:
+            self.async_write_ha_state()
+        except Exception:
+            pass
 
     @property
     def preset_mode(self) -> str | None:
@@ -138,6 +162,7 @@ class OmletFan(OmletEntity, FanEntity):
             await self._execute_action(self._ACTION_BOOST)
         else:
             await self._execute_action(self._ACTION_ON)
+        self._set_optimistic(True)
         await self.coordinator.async_request_refresh()
         self._schedule_followup_refresh()
 
@@ -165,6 +190,7 @@ class OmletFan(OmletEntity, FanEntity):
             except Exception as err:
                 _LOGGER.debug("Failed to switch fan mode to manual before turning off: %r", err)
         await self._execute_action(self._ACTION_OFF)
+        self._set_optimistic(False)
         await self.coordinator.async_request_refresh()
         self._schedule_followup_refresh()
 
