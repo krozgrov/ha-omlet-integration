@@ -39,6 +39,7 @@ class OmletFan(OmletEntity, FanEntity):
     _ACTION_ON = "on"
     _ACTION_OFF = "off"
     _ACTION_BOOST = "boost"
+    _SPEED_PERCENTAGES = (33, 67, 100)  # low/medium/high (Omlet manualSpeed is 0-100)
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
@@ -51,6 +52,9 @@ class OmletFan(OmletEntity, FanEntity):
 
     def _fan_state(self) -> dict[str, Any]:
         return self._device_state().get("state", {}).get("fan", {}) or {}
+
+    def _fan_config(self) -> dict[str, Any]:
+        return self._device_state().get("configuration", {}).get("fan", {}) or {}
 
     def _find_action(self, action_value: str) -> dict[str, Any] | None:
         actions = self._device_state().get("actions", []) or []
@@ -99,13 +103,66 @@ class OmletFan(OmletEntity, FanEntity):
             features |= FanEntityFeature.TURN_ON
         if self._has_off():
             features |= FanEntityFeature.TURN_OFF
+        # Speed control: Omlet supports manualSpeed (0-100) in manual mode.
+        # Some HA versions call this SET_SPEED, newer ones expose percentage APIs.
+        set_speed_feature = getattr(FanEntityFeature, "SET_SPEED", None)
+        if set_speed_feature is not None:
+            features |= set_speed_feature
         if self._has_boost():
             features |= FanEntityFeature.PRESET_MODE
         return features
 
-    async def async_turn_on(self, **kwargs) -> None:
+    @property
+    def percentage(self) -> int | None:
+        """Return current target speed as a percentage (3 discrete steps)."""
+        cfg = self._fan_config()
+        if (cfg.get("mode") or "").lower() != "manual":
+            return None
+        raw = cfg.get("manualSpeed")
+        if raw is None:
+            return None
+        try:
+            speed = int(raw)
+        except (TypeError, ValueError):
+            return None
+        # Snap to our 3-step representation
+        return min(self._SPEED_PERCENTAGES, key=lambda p: abs(p - speed))
+
+    @property
+    def speed_count(self) -> int:
+        """Expose 3 discrete speeds (low/medium/high) to HA when supported."""
+        return 3
+
+    async def async_set_percentage(self, percentage: int) -> None:
+        """Set fan speed (low/medium/high) by forcing manual mode + manualSpeed."""
+        # Map arbitrary percentage into 3 buckets.
+        pct = max(0, min(100, int(percentage)))
+        if pct <= 33:
+            target = self._SPEED_PERCENTAGES[0]
+        elif pct <= 66:
+            target = self._SPEED_PERCENTAGES[1]
+        else:
+            target = self._SPEED_PERCENTAGES[2]
+
+        await self.coordinator.api_client.patch_device_configuration(
+            self.device_id,
+            {"fan": {"mode": "manual", "manualSpeed": target}},
+        )
+        await self.coordinator.async_request_refresh()
+
+    async def async_turn_on(
+        self,
+        percentage: int | None = None,
+        preset_mode: str | None = None,
+        **kwargs,
+    ) -> None:
         """Turn the fan on."""
-        preset = kwargs.get("preset_mode")
+        # HA may call this with positional args (percentage, preset_mode), so keep
+        # an explicit signature to avoid TypeError.
+        if percentage is not None:
+            await self.async_set_percentage(percentage)
+
+        preset = preset_mode or kwargs.get("preset_mode")
         if preset == "boost" and self._has_boost():
             await self._execute_action(self._ACTION_BOOST)
         else:
