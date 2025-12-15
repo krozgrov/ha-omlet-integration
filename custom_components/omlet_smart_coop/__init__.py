@@ -63,6 +63,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Store the coordinator in hass.data
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
 
+    # Ensure services are registered even if HA hasn't been restarted (dev upgrades).
+    # Registration is idempotent in services.py.
+    try:
+        await async_register_services(hass, None)
+    except Exception as ex:
+        _LOGGER.warning("Service registration during setup_entry failed: %r", ex)
+
     # One-time setup tip: guide users to enable webhooks in Options
     try:
         if not entry.options.get(CONF_ENABLE_WEBHOOKS, False) and not entry.data.get(CONF_WEBHOOK_TIP_SHOWN):
