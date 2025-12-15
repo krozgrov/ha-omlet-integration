@@ -729,20 +729,29 @@ async def async_register_services(
             has_time_fields = bool(clear_slot or on_time or off_time or time_speed is not None)
 
             if has_time_fields:
-                slot = call.data.get("slot")
-                if slot is not None:
+                # Updating slot: allow 1-4 (slot 1 is allowed for updates).
+                time_slot = call.data.get("time_slot")
+                # Back-compat: if old field "slot" is provided and NOT clearing, treat it as time_slot.
+                if time_slot is None and call.data.get("slot") is not None and not clear_slot:
+                    time_slot = call.data.get("slot")
+
+                if time_slot is not None:
                     try:
-                        # UI exposes 1-3 (extra slots), which map to API slots 2-4.
-                        slot_i = int(slot) + 1
+                        slot_i = int(time_slot)
                     except (TypeError, ValueError):
-                        _LOGGER.error("Invalid slot value: %s", slot)
+                        _LOGGER.error("Invalid time_slot value: %s", time_slot)
                         return
-                    if slot_i not in (2, 3, 4):
-                        _LOGGER.error("Invalid slot (must be 1-3 mapping to API slots 2-4): %s", slot)
+                    if slot_i not in (1, 2, 3, 4):
+                        _LOGGER.error("Invalid time_slot (must be 1-4): %s", time_slot)
                         return
                 else:
-                    # Default to API slot 2 (UI slot 1).
-                    slot_i = 2
+                    slot_i = 1
+
+                # Clearing slot: only allow slots 2-4 (slot 1 cannot be cleared).
+                clear_slot_sel = call.data.get("clear_slot")
+                # Back-compat: if old field "slot" is provided and clearing, treat it as clear_slot selector (1-3 -> API 2-4).
+                if clear_slot_sel is None and call.data.get("slot") is not None and clear_slot:
+                    clear_slot_sel = call.data.get("slot")
 
                 if on_time:
                     patch[f"timeOn{slot_i}"] = on_time
@@ -759,8 +768,21 @@ async def async_register_services(
                 # If the user asked to clear the slot, make sure that wins even if
                 # the service UI sent other fields (it often retains prior values).
                 if clear_slot:
-                    patch[f"timeOn{slot_i}"] = "00:00"
-                    patch[f"timeOff{slot_i}"] = "00:00"
+                    if clear_slot_sel is not None:
+                        try:
+                            clear_i = int(clear_slot_sel)
+                        except (TypeError, ValueError):
+                            _LOGGER.error("Invalid clear_slot value: %s", clear_slot_sel)
+                            return
+                        if clear_i not in (1, 2, 3):
+                            _LOGGER.error("Invalid clear_slot (must be 1-3 mapping to API slots 2-4): %s", clear_slot_sel)
+                            return
+                        clear_slot_i = clear_i + 1
+                    else:
+                        clear_slot_i = 2
+
+                    patch[f"timeOn{clear_slot_i}"] = "00:00"
+                    patch[f"timeOff{clear_slot_i}"] = "00:00"
 
             # Thermostatic mode (API mode="temperature"): optional temp on/off + speed.
             if mode == "temperature":
