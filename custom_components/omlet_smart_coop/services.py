@@ -468,8 +468,17 @@ async def async_register_services(
             targets = await _targets(call)
             if not targets:
                 return
+            force_manual = _bool_with_default(call.data.get("force_manual"), True)
             for coord, ids in targets:
                 for device_id in ids:
+                    if force_manual:
+                        try:
+                            await coord.api_client.patch_device_configuration(
+                                device_id, {"fan": {"mode": "manual"}}
+                            )
+                        except Exception:
+                            # Still attempt turn on even if mode patch fails
+                            pass
                     await _fan_action_and_refresh(coord, device_id, "on")
         except Exception as err:
             _LOGGER.error("Failed to turn fan on: %s", err)
