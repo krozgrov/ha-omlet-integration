@@ -722,17 +722,22 @@ async def async_register_services(
             # Time mode: optional slot config and/or clear.
             # Time slot settings are valid regardless of current mode; only set
             # mode="time" if the caller explicitly chose Time mode.
-            clear_slot = _bool_with_default(call.data.get("clear_time_slot"), False)
+            # Clearing is driven by `clear_slot` (new behavior). We still accept
+            # legacy `clear_time_slot` boolean for older calls.
+            clear_slot_sel = call.data.get("clear_slot")
+            clear_requested = bool(clear_slot_sel is not None) or _bool_with_default(
+                call.data.get("clear_time_slot"), False
+            )
             on_time = _fmt_time_hhmm(call.data.get("on_time"))
             off_time = _fmt_time_hhmm(call.data.get("off_time"))
             time_speed = call.data.get("time_speed")
-            has_time_fields = bool(clear_slot or on_time or off_time or time_speed is not None)
+            has_time_fields = bool(clear_requested or on_time or off_time or time_speed is not None)
 
             if has_time_fields:
                 # Updating slot: allow 1-4 (slot 1 is allowed for updates).
                 time_slot = call.data.get("time_slot")
                 # Back-compat: if old field "slot" is provided and NOT clearing, treat it as time_slot.
-                if time_slot is None and call.data.get("slot") is not None and not clear_slot:
+                if time_slot is None and call.data.get("slot") is not None and not clear_requested:
                     time_slot = call.data.get("slot")
 
                 if time_slot is not None:
@@ -747,10 +752,8 @@ async def async_register_services(
                 else:
                     slot_i = 1
 
-                # Clearing slot: only allow slots 2-4 (slot 1 cannot be cleared).
-                clear_slot_sel = call.data.get("clear_slot")
-                # Back-compat: if old field "slot" is provided and clearing, treat it as clear_slot selector (1-3 -> API 2-4).
-                if clear_slot_sel is None and call.data.get("slot") is not None and clear_slot:
+                # Back-compat: if old field "slot" is provided and clearing, treat it as clear_slot selector.
+                if clear_slot_sel is None and call.data.get("slot") is not None and clear_requested:
                     clear_slot_sel = call.data.get("slot")
 
                 if on_time:
@@ -767,7 +770,7 @@ async def async_register_services(
 
                 # If the user asked to clear the slot, make sure that wins even if
                 # the service UI sent other fields (it often retains prior values).
-                if clear_slot:
+                if clear_requested:
                     if clear_slot_sel is not None:
                         try:
                             clear_i = int(clear_slot_sel)
