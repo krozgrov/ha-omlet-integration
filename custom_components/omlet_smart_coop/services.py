@@ -233,6 +233,22 @@ async def async_register_services(
 ) -> None:
     """Register services for Omlet Smart Coop."""
     domain_bucket = hass.data.setdefault(DOMAIN, {})
+
+    # Defensive cleanup: older dev prereleases registered these fan services.
+    # If HA was reloaded (not fully restarted) during upgrades, those services can
+    # remain visible under Developer Tools → Actions. Remove them proactively.
+    for legacy in (
+        "set_fan_manual_speed",
+        "set_fan_time_slot",
+        "clear_fan_time_slot",
+        "set_fan_time_slot_1",
+        "set_fan_thermostatic",
+    ):
+        try:
+            hass.services.async_remove(DOMAIN, legacy)
+        except Exception:
+            pass
+
     if domain_bucket.get("_services_registered"):
         return
 
