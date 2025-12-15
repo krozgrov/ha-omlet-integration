@@ -678,10 +678,6 @@ async def async_register_services(
                 else:
                     slot_i = 1
 
-                if clear_slot:
-                    patch[f"timeOn{slot_i}"] = "00:00"
-                    patch[f"timeOff{slot_i}"] = "00:00"
-
                 on_time = _fmt_time_hhmm(call.data.get("on_time"))
                 off_time = _fmt_time_hhmm(call.data.get("off_time"))
                 if on_time:
@@ -696,6 +692,12 @@ async def async_register_services(
                         _LOGGER.error("Invalid time_speed: %s", time_speed)
                         return
                     patch[f"timeSpeed{slot_i}"] = FAN_SPEED_MAP[time_speed]
+
+                # If the user asked to clear the slot, make sure that wins even if
+                # the service UI sent other fields (it often retains prior values).
+                if clear_slot:
+                    patch[f"timeOn{slot_i}"] = "00:00"
+                    patch[f"timeOff{slot_i}"] = "00:00"
 
             # Thermostatic mode (API mode="temperature"): optional temp on/off + speed.
             if mode == "temperature":
