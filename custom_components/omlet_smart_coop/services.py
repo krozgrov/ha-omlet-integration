@@ -267,8 +267,14 @@ async def async_register_services(
     if removed:
         _LOGGER.info("Removed legacy Omlet fan services: %s", ", ".join(sorted(set(removed))))
 
-    if domain_bucket.get("_services_registered"):
-        return
+    # Don't early-return on upgrades/reloads: make registration idempotent so new
+    # services added in dev prereleases (e.g. turn_fan_on/off) still get registered
+    # even if HA didn't fully restart.
+
+    def _register(service: str, handler) -> None:
+        if hass.services.has_service(DOMAIN, service):
+            return
+        hass.services.async_register(DOMAIN, service, handler)
 
     async def _targets(call: ServiceCall) -> list[tuple[OmletDataCoordinator, list[str]]]:
         """Return (coordinator, [device_ids]) for this call."""
@@ -793,20 +799,16 @@ async def async_register_services(
         except Exception as err:
             _LOGGER.error("Failed to set fan mode: %s", err)
 
-    # Register all services
-    hass.services.async_register(DOMAIN, SERVICE_OPEN_DOOR, handle_open_door)
-    hass.services.async_register(DOMAIN, SERVICE_CLOSE_DOOR, handle_close_door)
-    hass.services.async_register(
-        DOMAIN, SERVICE_UPDATE_OVERNIGHT_SLEEP, handle_update_overnight_sleep
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule
-    )
-    hass.services.async_register(DOMAIN, SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
-    hass.services.async_register(DOMAIN, "regenerate_webhook_id", handle_regenerate_webhook_id)
-    hass.services.async_register(DOMAIN, "turn_fan_on", handle_turn_fan_on)
-    hass.services.async_register(DOMAIN, "turn_fan_off", handle_turn_fan_off)
-    hass.services.async_register(DOMAIN, "set_fan_mode", handle_set_fan_mode)
+    # Register all services (idempotent)
+    _register(SERVICE_OPEN_DOOR, handle_open_door)
+    _register(SERVICE_CLOSE_DOOR, handle_close_door)
+    _register(SERVICE_UPDATE_OVERNIGHT_SLEEP, handle_update_overnight_sleep)
+    _register(SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule)
+    _register(SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
+    _register("regenerate_webhook_id", handle_regenerate_webhook_id)
+    _register("turn_fan_on", handle_turn_fan_on)
+    _register("turn_fan_off", handle_turn_fan_off)
+    _register("set_fan_mode", handle_set_fan_mode)
     domain_bucket["_services_registered"] = True
 
 
