@@ -663,8 +663,15 @@ async def async_register_services(
                 patch["manualSpeed"] = FAN_SPEED_MAP[manual_speed]
 
             # Time mode: optional slot config and/or clear.
-            if mode == "time":
-                clear_slot = _bool_with_default(call.data.get("clear_time_slot"), False)
+            # Time slot settings are valid regardless of current mode; only set
+            # mode="time" if the caller explicitly chose Time mode.
+            clear_slot = _bool_with_default(call.data.get("clear_time_slot"), False)
+            on_time = _fmt_time_hhmm(call.data.get("on_time"))
+            off_time = _fmt_time_hhmm(call.data.get("off_time"))
+            time_speed = call.data.get("time_speed")
+            has_time_fields = bool(clear_slot or on_time or off_time or time_speed is not None)
+
+            if has_time_fields:
                 slot = call.data.get("slot")
                 if slot is not None:
                     try:
@@ -678,14 +685,11 @@ async def async_register_services(
                 else:
                     slot_i = 1
 
-                on_time = _fmt_time_hhmm(call.data.get("on_time"))
-                off_time = _fmt_time_hhmm(call.data.get("off_time"))
                 if on_time:
                     patch[f"timeOn{slot_i}"] = on_time
                 if off_time:
                     patch[f"timeOff{slot_i}"] = off_time
 
-                time_speed = call.data.get("time_speed")
                 if time_speed is not None:
                     time_speed = str(time_speed).lower()
                     if time_speed not in FAN_SPEED_MAP:
