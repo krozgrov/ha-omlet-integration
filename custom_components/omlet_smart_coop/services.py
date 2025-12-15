@@ -675,15 +675,17 @@ async def async_register_services(
                 slot = call.data.get("slot")
                 if slot is not None:
                     try:
-                        slot_i = int(slot)
+                        # UI exposes 1-3 (extra slots), which map to API slots 2-4.
+                        slot_i = int(slot) + 1
                     except (TypeError, ValueError):
                         _LOGGER.error("Invalid slot value: %s", slot)
                         return
-                    if slot_i not in (1, 2, 3, 4):
-                        _LOGGER.error("Invalid slot (must be 1-4): %s", slot_i)
+                    if slot_i not in (2, 3, 4):
+                        _LOGGER.error("Invalid slot (must be 1-3 mapping to API slots 2-4): %s", slot)
                         return
                 else:
-                    slot_i = 1
+                    # Default to API slot 2 (UI slot 1).
+                    slot_i = 2
 
                 if on_time:
                     patch[f"timeOn{slot_i}"] = on_time

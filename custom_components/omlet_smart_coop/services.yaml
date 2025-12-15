@@ -190,12 +190,12 @@ set_fan_mode:
     # Time mode settings (optional)
     slot:
       name: Slot
-      description: (Time mode) Slot number to set/clear (1-4). Defaults to 1.
+      description: (Time slots) Extra slot number to set/clear (1-3 maps to API slots 2-4). Slot 1 cannot be cleared.
       required: false
       selector:
         number:
           min: 1
-          max: 4
+          max: 3
           step: 1
     on_time:
       name: On At
