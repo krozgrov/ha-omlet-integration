@@ -136,11 +136,11 @@ class OmletFan(OmletEntity, FanEntity):
         # Home Assistant gates service calls like `fan.turn_on` behind these flags.
         # If we don't advertise TURN_ON/TURN_OFF, HA will reject the call even if
         # async_turn_on/async_turn_off are implemented.
-        features = FanEntityFeature(0)
-        if self._has_on():
-            features |= FanEntityFeature.TURN_ON
-        if self._has_off():
-            features |= FanEntityFeature.TURN_OFF
+        #
+        # Some Omlet API payloads omit the `actions` list (or it can be temporarily empty),
+        # which would incorrectly disable core fan services in HA. The fan entity is
+        # fundamentally a toggle, so always advertise TURN_ON/TURN_OFF.
+        features = FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
         if self._has_boost():
             features |= FanEntityFeature.PRESET_MODE
         return features
@@ -215,7 +215,12 @@ class OmletFan(OmletEntity, FanEntity):
         action_data = self._find_action(action)
         if not action_data:
             _LOGGER.warning(
-                "Action %s unavailable for fan %s", action, self.device_id
+                "Action %s missing in device actions for fan %s; falling back to direct action endpoint",
+                action,
+                self.device_id,
+            )
+            await self.coordinator.api_client.execute_action(
+                f"device/{self.device_id}/action/{action}"
             )
             return
         await self.coordinator.api_client.execute_action(action_data["url"])
