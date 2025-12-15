@@ -774,10 +774,16 @@ async def async_register_services(
                         except (TypeError, ValueError):
                             _LOGGER.error("Invalid clear_slot value: %s", clear_slot_sel)
                             return
-                        if clear_i not in (1, 2, 3):
-                            _LOGGER.error("Invalid clear_slot (must be 1-3 mapping to API slots 2-4): %s", clear_slot_sel)
+                        # Accept:
+                        # - New behavior: 2-4 are direct API slots
+                        # - Legacy behavior: 1-3 map to API slots 2-4
+                        if clear_i in (2, 3, 4):
+                            clear_slot_i = clear_i
+                        elif clear_i in (1, 2, 3):
+                            clear_slot_i = clear_i + 1
+                        else:
+                            _LOGGER.error("Invalid clear_slot (must be 2-4; legacy 1-3 accepted): %s", clear_slot_sel)
                             return
-                        clear_slot_i = clear_i + 1
                     else:
                         clear_slot_i = 2
 
