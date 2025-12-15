@@ -141,6 +141,37 @@ regenerate_webhook_id:
   description: Unregister current webhook and register a new random one. You must update the Omlet portal with the new URL.
 
 # Fan Configuration Services
+turn_fan_on:
+  name: Turn Fan On
+  description: Turn the fan on immediately (uses Omlet action endpoint)
+  fields:
+    device_id:
+      name: Device
+      description: The Omlet fan device to control
+      required: true
+      selector:
+        device:
+          integration: omlet_smart_coop
+
+turn_fan_off:
+  name: Turn Fan Off
+  description: Turn the fan off immediately (uses Omlet action endpoint). Optionally forces Mode to Manual first so it won't auto-restart.
+  fields:
+    device_id:
+      name: Device
+      description: The Omlet fan device to control
+      required: true
+      selector:
+        device:
+          integration: omlet_smart_coop
+    force_manual:
+      name: Force Manual Mode First
+      description: If enabled, switches fan mode to Manual before turning off (prevents Time/Thermostatic from restarting it)
+      required: false
+      default: true
+      selector:
+        boolean: {}
+
 set_fan_mode:
   name: Set Fan Mode
   description: Set the fan operating mode (Manual, Time, Thermostatic) and optionally configure mode-specific settings.

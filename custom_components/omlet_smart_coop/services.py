@@ -454,6 +454,46 @@ async def async_register_services(
         except Exception as err:
             _LOGGER.error("Failed to process close door command: %s", err)
 
+    async def _fan_action_and_refresh(
+        coord: OmletDataCoordinator, device_id: str, action: str
+    ) -> None:
+        """Execute a fan action (on/off) and refresh state."""
+        await coord.api_client.execute_action(f"device/{device_id}/action/{action}")
+        await coord.async_request_refresh()
+        schedule_followup_refresh(hass, coord, (1.5, 5.0))
+
+    async def handle_turn_fan_on(call: ServiceCall) -> None:
+        """Turn fan on immediately."""
+        try:
+            targets = await _targets(call)
+            if not targets:
+                return
+            for coord, ids in targets:
+                for device_id in ids:
+                    await _fan_action_and_refresh(coord, device_id, "on")
+        except Exception as err:
+            _LOGGER.error("Failed to turn fan on: %s", err)
+
+    async def handle_turn_fan_off(call: ServiceCall) -> None:
+        """Turn fan off immediately; optionally force manual mode first."""
+        try:
+            targets = await _targets(call)
+            if not targets:
+                return
+            force_manual = _bool_with_default(call.data.get("force_manual"), True)
+            for coord, ids in targets:
+                for device_id in ids:
+                    if force_manual:
+                        try:
+                            await coord.api_client.patch_device_configuration(
+                                device_id, {"fan": {"mode": "manual"}}
+                            )
+                        except Exception:
+                            pass
+                    await _fan_action_and_refresh(coord, device_id, "off")
+        except Exception as err:
+            _LOGGER.error("Failed to turn fan off: %s", err)
+
     async def handle_update_overnight_sleep(call: ServiceCall) -> None:
         """Handle updating overnight sleep schedule."""
         try:
@@ -753,6 +793,8 @@ async def async_register_services(
     )
     hass.services.async_register(DOMAIN, SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
     hass.services.async_register(DOMAIN, "regenerate_webhook_id", handle_regenerate_webhook_id)
+    hass.services.async_register(DOMAIN, "turn_fan_on", handle_turn_fan_on)
+    hass.services.async_register(DOMAIN, "turn_fan_off", handle_turn_fan_off)
     hass.services.async_register(DOMAIN, "set_fan_mode", handle_set_fan_mode)
     domain_bucket["_services_registered"] = True
 
@@ -766,6 +808,8 @@ def async_remove_services(hass: HomeAssistant) -> None:
         SERVICE_UPDATE_DOOR_SCHEDULE,
         SERVICE_SHOW_WEBHOOK_URL,
         "regenerate_webhook_id",
+        "turn_fan_on",
+        "turn_fan_off",
         "set_fan_mode",
     ]:
         hass.services.async_remove(DOMAIN, service)
