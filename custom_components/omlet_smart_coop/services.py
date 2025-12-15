@@ -605,7 +605,7 @@ async def async_register_services(
             _LOGGER.error("Failed to update door schedule: %s", err)
 
     async def handle_set_fan_mode(call: ServiceCall) -> None:
-        """Set fan mode (manual/time/thermostatic)."""
+        """Set fan mode (manual/time/thermostatic) and optionally apply mode-specific settings."""
         try:
             targets = await _targets(call)
             if not targets:
@@ -617,14 +617,84 @@ async def async_register_services(
             if mode not in {"manual", "time", "temperature"}:
                 _LOGGER.error("Invalid fan mode: %s", mode)
                 return
-            apply_immediately = bool(call.data.get("apply_immediately", True))
+            patch: dict[str, Any] = {"mode": mode}
+
+            # Manual mode: optional manual speed (Low/Medium/High).
+            manual_speed = call.data.get("manual_speed")
+            if mode == "manual" and manual_speed is not None:
+                manual_speed = str(manual_speed).lower()
+                if manual_speed not in _FAN_SPEED_MAP:
+                    _LOGGER.error("Invalid manual_speed: %s", manual_speed)
+                    return
+                patch["manualSpeed"] = _FAN_SPEED_MAP[manual_speed]
+
+            # Time mode: optional slot config and/or clear.
+            if mode == "time":
+                clear_slot = _bool_with_default(call.data.get("clear_time_slot"), False)
+                slot = call.data.get("slot")
+                if slot is not None:
+                    try:
+                        slot_i = int(slot)
+                    except (TypeError, ValueError):
+                        _LOGGER.error("Invalid slot value: %s", slot)
+                        return
+                    if slot_i not in (1, 2, 3, 4):
+                        _LOGGER.error("Invalid slot (must be 1-4): %s", slot_i)
+                        return
+                else:
+                    slot_i = 1
+
+                if clear_slot:
+                    patch[f"timeOn{slot_i}"] = "00:00"
+                    patch[f"timeOff{slot_i}"] = "00:00"
+
+                on_time = _fmt_time_hhmm(call.data.get("on_time"))
+                off_time = _fmt_time_hhmm(call.data.get("off_time"))
+                if on_time:
+                    patch[f"timeOn{slot_i}"] = on_time
+                if off_time:
+                    patch[f"timeOff{slot_i}"] = off_time
+
+                time_speed = call.data.get("time_speed")
+                if time_speed is not None:
+                    time_speed = str(time_speed).lower()
+                    if time_speed not in _FAN_SPEED_MAP:
+                        _LOGGER.error("Invalid time_speed: %s", time_speed)
+                        return
+                    patch[f"timeSpeed{slot_i}"] = _FAN_SPEED_MAP[time_speed]
+
+            # Thermostatic mode (API mode="temperature"): optional temp on/off + speed.
+            if mode == "temperature":
+                if call.data.get("temp_on") is not None:
+                    api_val = TemperatureConverter.convert(
+                        float(call.data["temp_on"]),
+                        hass.config.units.temperature_unit,
+                        UnitOfTemperature.CELSIUS,
+                    )
+                    patch["tempOn"] = int(round(api_val))
+                if call.data.get("temp_off") is not None:
+                    api_val = TemperatureConverter.convert(
+                        float(call.data["temp_off"]),
+                        hass.config.units.temperature_unit,
+                        UnitOfTemperature.CELSIUS,
+                    )
+                    patch["tempOff"] = int(round(api_val))
+                thermo_speed = call.data.get("thermostatic_speed")
+                if thermo_speed is not None:
+                    thermo_speed = str(thermo_speed).lower()
+                    if thermo_speed not in _FAN_SPEED_MAP:
+                        _LOGGER.error("Invalid thermostatic_speed: %s", thermo_speed)
+                        return
+                    patch["tempSpeed"] = _FAN_SPEED_MAP[thermo_speed]
+
+            apply_immediately = _bool_with_default(call.data.get("apply_immediately"), True)
             for coord, ids in targets:
                 for device_id in ids:
                     await _fan_patch_and_refresh(
                         hass,
                         coord,
                         device_id,
-                        {"mode": mode},
+                        patch,
                         apply_immediately=apply_immediately,
                     )
         except Exception as err:
@@ -728,49 +798,6 @@ async def async_register_services(
             data = call_data
         await handle_set_fan_time_slot(_Call())
 
-    async def handle_set_fan_thermostatic(call: ServiceCall) -> None:
-        """Configure thermostatic settings (temp on/off/speed)."""
-        try:
-            targets = await _targets(call)
-            if not targets:
-                return
-            patch: dict[str, Any] = {}
-            # Allow enabling thermostatic mode even if no other fields are provided.
-            if _bool_with_default(call.data.get("set_mode_thermostatic"), True):
-                patch["mode"] = "temperature"
-            if call.data.get("temp_on") is not None:
-                api_val = TemperatureConverter.convert(
-                    float(call.data["temp_on"]),
-                    hass.config.units.temperature_unit,
-                    UnitOfTemperature.CELSIUS,
-                )
-                patch["tempOn"] = int(round(api_val))
-            if call.data.get("temp_off") is not None:
-                api_val = TemperatureConverter.convert(
-                    float(call.data["temp_off"]),
-                    hass.config.units.temperature_unit,
-                    UnitOfTemperature.CELSIUS,
-                )
-                patch["tempOff"] = int(round(api_val))
-            speed = call.data.get("speed")
-            if speed is not None:
-                speed = str(speed).lower()
-                if speed not in _FAN_SPEED_MAP:
-                    _LOGGER.error("Invalid thermostatic speed: %s", speed)
-                    return
-                patch["tempSpeed"] = _FAN_SPEED_MAP[speed]
-            if not patch:
-                _LOGGER.error("No thermostatic fields provided")
-                return
-            apply_immediately = _bool_with_default(call.data.get("apply_immediately"), False)
-            for coord, ids in targets:
-                for device_id in ids:
-                    await _fan_patch_and_refresh(
-                        hass, coord, device_id, patch, apply_immediately=apply_immediately
-                    )
-        except Exception as err:
-            _LOGGER.error("Failed to set fan thermostatic settings: %s", err)
-
     # Register all services
     hass.services.async_register(DOMAIN, SERVICE_OPEN_DOOR, handle_open_door)
     hass.services.async_register(DOMAIN, SERVICE_CLOSE_DOOR, handle_close_door)
@@ -787,7 +814,6 @@ async def async_register_services(
     hass.services.async_register(DOMAIN, "set_fan_time_slot", handle_set_fan_time_slot)
     hass.services.async_register(DOMAIN, "clear_fan_time_slot", handle_clear_fan_time_slot)
     hass.services.async_register(DOMAIN, "set_fan_time_slot_1", handle_set_fan_time_slot_1)
-    hass.services.async_register(DOMAIN, "set_fan_thermostatic", handle_set_fan_thermostatic)
     domain_bucket["_services_registered"] = True
 
 
@@ -805,7 +831,6 @@ def async_remove_services(hass: HomeAssistant) -> None:
         "set_fan_time_slot",
         "clear_fan_time_slot",
         "set_fan_time_slot_1",
-        "set_fan_thermostatic",
     ]:
         hass.services.async_remove(DOMAIN, service)
     try:

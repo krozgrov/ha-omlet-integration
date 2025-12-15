@@ -143,7 +143,7 @@ regenerate_webhook_id:
 # Fan Configuration Services
 set_fan_mode:
   name: Set Fan Mode
-  description: Set the fan operating mode (Manual, Time, Thermostatic)
+  description: Set the fan operating mode (Manual, Time, Thermostatic) and optionally configure mode-specific settings.
   fields:
     device_id:
       name: Device
@@ -173,6 +173,96 @@ set_fan_mode:
       default: true
       selector:
         boolean: {}
+    manual_speed:
+      name: Manual Speed
+      description: (Manual mode) Optional speed to set when mode is Manual
+      required: false
+      selector:
+        select:
+          options:
+            - label: Low
+              value: low
+            - label: Medium
+              value: medium
+            - label: High
+              value: high
+          mode: dropdown
+    # Time mode settings (optional)
+    slot:
+      name: Slot
+      description: (Time mode) Slot number to set/clear (1-4). Defaults to 1.
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+    on_time:
+      name: On At
+      description: (Time mode) Time to turn on (HH:MM)
+      required: false
+      selector:
+        time: {}
+    off_time:
+      name: Off At
+      description: (Time mode) Time to turn off (HH:MM)
+      required: false
+      selector:
+        time: {}
+    time_speed:
+      name: Time Speed
+      description: (Time mode) Speed for the selected slot
+      required: false
+      selector:
+        select:
+          options:
+            - label: Low
+              value: low
+            - label: Medium
+              value: medium
+            - label: High
+              value: high
+          mode: dropdown
+    clear_time_slot:
+      name: Clear Time Slot
+      description: (Time mode) If enabled, clears the selected slot by setting On/Off to 00:00
+      required: false
+      default: false
+      selector:
+        boolean: {}
+    # Thermostatic mode settings (optional)
+    temp_on:
+      name: Temp On
+      description: (Thermostatic mode) Temperature to start fan (in your Home Assistant temperature unit)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 140
+          step: 1
+    temp_off:
+      name: Temp Off
+      description: (Thermostatic mode) Temperature to stop fan (in your Home Assistant temperature unit)
+      required: false
+      selector:
+        number:
+          min: 0
+          max: 140
+          step: 1
+    thermostatic_speed:
+      name: Thermostatic Speed
+      description: (Thermostatic mode) Fan speed when running thermostatically
+      required: false
+      selector:
+        select:
+          options:
+            - label: Low
+              value: low
+            - label: Medium
+              value: medium
+            - label: High
+              value: high
+          mode: dropdown
 
 set_fan_manual_speed:
   name: Set Fan Manual Speed
@@ -349,60 +439,3 @@ set_fan_time_slot_1:
       selector:
         boolean: {}
 
-set_fan_thermostatic:
-  name: Set Fan Thermostatic Settings
-  description: Configure thermostatic settings (Temp On/Off and Speed). Optionally forces Mode to Thermostatic.
-  fields:
-    device_id:
-      name: Device
-      description: The Omlet fan device to update
-      required: true
-      selector:
-        device:
-          integration: omlet_smart_coop
-    temp_on:
-      name: Temp On
-      description: Temperature to start fan (in your Home Assistant temperature unit)
-      required: false
-      selector:
-        number:
-          min: 0
-          max: 140
-          step: 1
-    temp_off:
-      name: Temp Off
-      description: Temperature to stop fan (in your Home Assistant temperature unit)
-      required: false
-      selector:
-        number:
-          min: 0
-          max: 140
-          step: 1
-    speed:
-      name: Speed
-      description: Fan speed when running thermostatically
-      required: false
-      selector:
-        select:
-          options:
-            - label: Low
-              value: low
-            - label: Medium
-              value: medium
-            - label: High
-              value: high
-          mode: dropdown
-    set_mode_thermostatic:
-      name: Set Mode to Thermostatic
-      description: If enabled, also sets Mode to Thermostatic
-      required: false
-      default: true
-      selector:
-        boolean: {}
-    apply_immediately:
-      name: Apply Immediately
-      description: Toggle the fan off/on if currently running to apply changes immediately
-      required: false
-      default: false
-      selector:
-        boolean: {}
