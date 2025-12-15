@@ -47,6 +47,13 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+def _bool_with_default(value: Any, default: bool) -> bool:
+    """Return bool(value) but treat None as 'use default'."""
+    if value is None:
+        return bool(default)
+    return bool(value)
+
+
 def _fmt_time_hhmm(value: Any) -> str | None:
     """Normalize HA time selector value into HH:MM string."""
     if value is None:
@@ -677,9 +684,9 @@ async def async_register_services(
             if not patch:
                 _LOGGER.error("No time slot fields provided")
                 return
-            if bool(call.data.get("set_mode_time", True)):
+            if _bool_with_default(call.data.get("set_mode_time"), True):
                 patch["mode"] = "time"
-            apply_immediately = bool(call.data.get("apply_immediately", False))
+            apply_immediately = _bool_with_default(call.data.get("apply_immediately"), False)
             for coord, ids in targets:
                 for device_id in ids:
                     await _fan_patch_and_refresh(
@@ -703,7 +710,7 @@ async def async_register_services(
                 _LOGGER.error("Invalid slot (must be 1-4): %s", slot)
                 return
             patch = {f"timeOn{slot}": "00:00", f"timeOff{slot}": "00:00"}
-            apply_immediately = bool(call.data.get("apply_immediately", False))
+            apply_immediately = _bool_with_default(call.data.get("apply_immediately"), False)
             for coord, ids in targets:
                 for device_id in ids:
                     await _fan_patch_and_refresh(
@@ -729,7 +736,7 @@ async def async_register_services(
                 return
             patch: dict[str, Any] = {}
             # Allow enabling thermostatic mode even if no other fields are provided.
-            if bool(call.data.get("set_mode_thermostatic", True)):
+            if _bool_with_default(call.data.get("set_mode_thermostatic"), True):
                 patch["mode"] = "temperature"
             if call.data.get("temp_on") is not None:
                 api_val = TemperatureConverter.convert(
@@ -755,7 +762,7 @@ async def async_register_services(
             if not patch:
                 _LOGGER.error("No thermostatic fields provided")
                 return
-            apply_immediately = bool(call.data.get("apply_immediately", False))
+            apply_immediately = _bool_with_default(call.data.get("apply_immediately"), False)
             for coord, ids in targets:
                 for device_id in ids:
                     await _fan_patch_and_refresh(
