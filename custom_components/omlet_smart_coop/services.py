@@ -234,20 +234,38 @@ async def async_register_services(
     """Register services for Omlet Smart Coop."""
     domain_bucket = hass.data.setdefault(DOMAIN, {})
 
-    # Defensive cleanup: older dev prereleases registered these fan services.
-    # If HA was reloaded (not fully restarted) during upgrades, those services can
-    # remain visible under Developer Tools → Actions. Remove them proactively.
-    for legacy in (
-        "set_fan_manual_speed",
-        "set_fan_time_slot",
-        "clear_fan_time_slot",
-        "set_fan_time_slot_1",
-        "set_fan_thermostatic",
-    ):
-        try:
-            hass.services.async_remove(DOMAIN, legacy)
-        except Exception:
-            pass
+    # Defensive cleanup: during rapid dev prereleases, legacy fan services can linger
+    # in HA if the user reloads instead of fully restarting. Remove *any* old fan
+    # services except the single canonical one: set_fan_mode.
+    removed: list[str] = []
+    try:
+        existing = hass.services.async_services().get(DOMAIN, {}) or {}
+        for svc in list(existing.keys()):
+            if svc in {"set_fan_mode"}:
+                continue
+            if svc.startswith("set_fan_") or svc.startswith("clear_fan_"):
+                try:
+                    hass.services.async_remove(DOMAIN, svc)
+                    removed.append(svc)
+                except Exception:
+                    pass
+    except Exception:
+        # If the service registry isn't ready for introspection, fall back to a best-effort list.
+        for svc in (
+            "set_fan_manual_speed",
+            "set_fan_time_slot",
+            "clear_fan_time_slot",
+            "set_fan_time_slot_1",
+            "set_fan_thermostatic",
+        ):
+            try:
+                hass.services.async_remove(DOMAIN, svc)
+                removed.append(svc)
+            except Exception:
+                pass
+
+    if removed:
+        _LOGGER.info("Removed legacy Omlet fan services: %s", ", ".join(sorted(set(removed))))
 
     if domain_bucket.get("_services_registered"):
         return
@@ -544,52 +562,52 @@ async def async_register_services(
                         current_config = await coord.api_client.get_device_configuration(device_id)
                         door_config = current_config.get("door", {})
 
-                    # Apply door mode settings
-                    door_config["openMode"] = door_mode
-                    door_config["closeMode"] = door_mode
+                        # Apply door mode settings
+                        door_config["openMode"] = door_mode
+                        door_config["closeMode"] = door_mode
 
-                    # Handle time settings if mode is "time"
-                    if door_mode == "time":
-                        if ATTR_OPEN_TIME in call.data:
-                            open_time = call.data[ATTR_OPEN_TIME]
-                            if not isinstance(open_time, str):
-                                open_time = open_time.strftime("%H:%M")
-                            else:
-                                open_time_parts = open_time.split(":")
-                                open_time = (
-                                    f"{open_time_parts[0]:0>2}:{open_time_parts[1]:0>2}"
-                                    if len(open_time_parts) >= 2
-                                    else "00:00"
-                                )
-                            door_config["openTime"] = open_time
+                        # Handle time settings if mode is "time"
+                        if door_mode == "time":
+                            if ATTR_OPEN_TIME in call.data:
+                                open_time = call.data[ATTR_OPEN_TIME]
+                                if not isinstance(open_time, str):
+                                    open_time = open_time.strftime("%H:%M")
+                                else:
+                                    open_time_parts = open_time.split(":")
+                                    open_time = (
+                                        f"{open_time_parts[0]:0>2}:{open_time_parts[1]:0>2}"
+                                        if len(open_time_parts) >= 2
+                                        else "00:00"
+                                    )
+                                door_config["openTime"] = open_time
 
-                        if ATTR_CLOSE_TIME in call.data:
-                            close_time = call.data[ATTR_CLOSE_TIME]
-                            if not isinstance(close_time, str):
-                                close_time = close_time.strftime("%H:%M")
-                            else:
-                                close_time_parts = close_time.split(":")
-                                close_time = (
-                                    f"{close_time_parts[0]:0>2}:{close_time_parts[1]:0>2}"
-                                    if len(close_time_parts) >= 2
-                                    else "00:00"
-                                )
-                            door_config["closeTime"] = close_time
+                            if ATTR_CLOSE_TIME in call.data:
+                                close_time = call.data[ATTR_CLOSE_TIME]
+                                if not isinstance(close_time, str):
+                                    close_time = close_time.strftime("%H:%M")
+                                else:
+                                    close_time_parts = close_time.split(":")
+                                    close_time = (
+                                        f"{close_time_parts[0]:0>2}:{close_time_parts[1]:0>2}"
+                                        if len(close_time_parts) >= 2
+                                        else "00:00"
+                                    )
+                                door_config["closeTime"] = close_time
 
-                    # Handle light settings if mode is "light"
-                    elif door_mode == "light":
-                        field_mapping = {
-                            "open_light_level": "openLightLevel",
-                            "close_light_level": "closeLightLevel",
-                            "open_delay": "openDelay",
-                            "close_delay": "closeDelay",
-                        }
+                        # Handle light settings if mode is "light"
+                        elif door_mode == "light":
+                            field_mapping = {
+                                "open_light_level": "openLightLevel",
+                                "close_light_level": "closeLightLevel",
+                                "open_delay": "openDelay",
+                                "close_delay": "closeDelay",
+                            }
 
-                        for service_field, api_field in field_mapping.items():
-                            if service_field in call.data:
-                                door_config[api_field] = call.data[service_field]
+                            for service_field, api_field in field_mapping.items():
+                                if service_field in call.data:
+                                    door_config[api_field] = call.data[service_field]
 
-                    # Update configuration for this device
+                        # Update configuration for this device
                         response_data = await coord.api_client.patch_device_configuration(
                             device_id, {"door": door_config}
                         )
@@ -639,10 +657,10 @@ async def async_register_services(
             manual_speed = call.data.get("manual_speed")
             if mode == "manual" and manual_speed is not None:
                 manual_speed = str(manual_speed).lower()
-                if manual_speed not in _FAN_SPEED_MAP:
+                if manual_speed not in FAN_SPEED_MAP:
                     _LOGGER.error("Invalid manual_speed: %s", manual_speed)
                     return
-                patch["manualSpeed"] = _FAN_SPEED_MAP[manual_speed]
+                patch["manualSpeed"] = FAN_SPEED_MAP[manual_speed]
 
             # Time mode: optional slot config and/or clear.
             if mode == "time":
@@ -674,10 +692,10 @@ async def async_register_services(
                 time_speed = call.data.get("time_speed")
                 if time_speed is not None:
                     time_speed = str(time_speed).lower()
-                    if time_speed not in _FAN_SPEED_MAP:
+                    if time_speed not in FAN_SPEED_MAP:
                         _LOGGER.error("Invalid time_speed: %s", time_speed)
                         return
-                    patch[f"timeSpeed{slot_i}"] = _FAN_SPEED_MAP[time_speed]
+                    patch[f"timeSpeed{slot_i}"] = FAN_SPEED_MAP[time_speed]
 
             # Thermostatic mode (API mode="temperature"): optional temp on/off + speed.
             if mode == "temperature":
@@ -698,10 +716,10 @@ async def async_register_services(
                 thermo_speed = call.data.get("thermostatic_speed")
                 if thermo_speed is not None:
                     thermo_speed = str(thermo_speed).lower()
-                    if thermo_speed not in _FAN_SPEED_MAP:
+                    if thermo_speed not in FAN_SPEED_MAP:
                         _LOGGER.error("Invalid thermostatic_speed: %s", thermo_speed)
                         return
-                    patch["tempSpeed"] = _FAN_SPEED_MAP[thermo_speed]
+                    patch["tempSpeed"] = FAN_SPEED_MAP[thermo_speed]
 
             apply_immediately = _bool_with_default(call.data.get("apply_immediately"), True)
             for coord, ids in targets:
