@@ -497,6 +497,8 @@ async def async_register_services(
                             await coord.api_client.patch_device_configuration(
                                 device_id, {"fan": {"mode": "manual"}}
                             )
+                            # Give Omlet a moment to apply mode changes before turning off.
+                            await asyncio.sleep(0.5)
                         except Exception:
                             pass
                     await _fan_action_and_refresh(coord, device_id, "off")
