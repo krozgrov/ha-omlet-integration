@@ -789,6 +789,9 @@ async def async_register_services(
 
                     patch[f"timeOn{clear_slot_i}"] = "00:00"
                     patch[f"timeOff{clear_slot_i}"] = "00:00"
+                    # Reset speed as well to avoid Omlet treating the slot as configured.
+                    patch[f"timeSpeed{clear_slot_i}"] = 100
+                    _LOGGER.debug("Clearing time slot %s (API slot %s)", clear_slot_sel, clear_slot_i)
 
             # Thermostatic mode (API mode="temperature"): optional temp on/off + speed.
             if mode == "temperature":
