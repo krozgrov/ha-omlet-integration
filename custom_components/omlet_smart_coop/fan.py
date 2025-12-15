@@ -20,17 +20,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     _LOGGER.debug("Setting up fans for devices: %s", coordinator.data)
 
     fans = []
-    fan_action_values = {"on", "off", "boost"}
     for device_id, device_data in coordinator.data.items():
         # Any device that reports fan state can expose a fan entity regardless of deviceType label
         fan_state = device_data.get("state", {}).get("fan")
-        if not fan_state:
-            continue
-        has_fan_actions = any(
-            (action.get("actionValue") or "").lower() in fan_action_values
-            for action in device_data.get("actions", []) or []
-        )
-        if not has_fan_actions:
+        fan_cfg = device_data.get("configuration", {}).get("fan")
+        if not fan_state and not fan_cfg:
             continue
         fans.append(OmletFan(coordinator, device_id, device_data["name"]))
 
@@ -48,6 +42,9 @@ class OmletFan(OmletEntity, FanEntity):
         self._attr_name = f"{device_name} Fan"
         self._attr_unique_id = f"{device_id}_fan"
         self._attr_has_entity_name = True
+        # Always expose the fan as a basic on/off toggle in HA. Omlet's `actions`
+        # list can be omitted temporarily, but core fan services should still work.
+        self._attr_supported_features = FanEntityFeature.TURN_ON | FanEntityFeature.TURN_OFF
         # Optimistic UI state for webhook-less installs (short-lived).
         self._optimistic_is_on: bool | None = None
         self._optimistic_until: float = 0.0
@@ -76,7 +73,7 @@ class OmletFan(OmletEntity, FanEntity):
     @property
     def available(self) -> bool:
         """Return True if the fan provides state data."""
-        return bool(self._fan_state())
+        return bool(self._fan_state() or self._fan_config())
 
     @property
     def is_on(self) -> bool:

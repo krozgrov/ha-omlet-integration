@@ -6,9 +6,9 @@
 
 An integration for Home Assistant that connects your Omlet Smart Coop devices—including the Smart Automatic Chicken Coop Door and Smart Coop Fan—enabling monitoring and control directly from Home Assistant using the Omlet official API.
 
-## Pre-release: 2025.12.14b21
+## Pre-release: 2025.12.14b22
 
-- **Fix**: Fan entity always supports `fan.turn_on`/`fan.turn_off` even when Omlet payload temporarily omits `actions` (falls back to direct `/device/{id}/action/<on|off>` endpoint).
+- **Fix**: Fan entity no longer depends on Omlet `actions` for discovery/support flags. The fan is always exposed as an On/Off toggle and `fan.turn_off` won’t be blocked even if Omlet omits `actions` temporarily.
 
 ## Sponsor
 
