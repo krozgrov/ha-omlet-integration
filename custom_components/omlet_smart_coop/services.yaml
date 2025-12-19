@@ -28,13 +28,6 @@ update_overnight_sleep:
     device:
       integration: omlet_smart_coop
   fields:
-    device_id:
-      name: Device
-      description: The Omlet Smart Coop device to update
-      required: false
-      selector:
-        device:
-          integration: omlet_smart_coop
     enabled:
       name: Enable Overnight Sleep
       description: Enable or disable overnight sleep mode
@@ -82,13 +75,6 @@ update_door_schedule:
       domain: cover
       integration: omlet_smart_coop
   fields:
-    device_id:
-      name: Device
-      description: The Omlet Smart Coop device to update
-      required: false
-      selector:
-        device:
-          integration: omlet_smart_coop
     door_mode:
       name: Door Mode
       description: Mode for door operation (light, time, or manual)
@@ -164,13 +150,6 @@ turn_fan_on:
       domain: fan
       integration: omlet_smart_coop
   fields:
-    device_id:
-      name: Device
-      description: The Omlet fan device to control
-      required: false
-      selector:
-        device:
-          integration: omlet_smart_coop
     force_manual:
       name: Force Manual Mode First
       description: If enabled, switches fan mode to Manual before turning on (recommended)
@@ -189,13 +168,6 @@ turn_fan_off:
       domain: fan
       integration: omlet_smart_coop
   fields:
-    device_id:
-      name: Device
-      description: The Omlet fan device to control
-      required: false
-      selector:
-        device:
-          integration: omlet_smart_coop
     force_manual:
       name: Force Manual Mode First
       description: If enabled, switches fan mode to Manual before turning off (prevents Time/Thermostatic from restarting it)
@@ -214,13 +186,6 @@ set_fan_mode:
       domain: fan
       integration: omlet_smart_coop
   fields:
-    device_id:
-      name: Device
-      description: The Omlet fan device to update
-      required: false
-      selector:
-        device:
-          integration: omlet_smart_coop
     mode:
       name: Mode
       description: Fan mode
