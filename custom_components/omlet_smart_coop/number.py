@@ -88,7 +88,7 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
 
 class OmletFanTempOn(_OmletFanNumberBase):
     _CFG_KEY = "tempOn"
-    _LABEL = "15 Tstat On"
+    _LABEL = "04: Tstat On"
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(
@@ -103,7 +103,7 @@ class OmletFanTempOn(_OmletFanNumberBase):
 
 class OmletFanTempOff(_OmletFanNumberBase):
     _CFG_KEY = "tempOff"
-    _LABEL = "16 Tstat Off"
+    _LABEL = "04: Tstat Off"
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(
