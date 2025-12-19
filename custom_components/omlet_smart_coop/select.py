@@ -23,20 +23,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
 
     entities: list[SelectEntity] = []
-    dynamic_entities: list[OmletFanTimeSpeed1Select] = []
     for device_id, device_data in iter_fan_devices(coordinator):
         name = device_data.get("name") or device_id
         entities.append(OmletFanModeSelect(coordinator, device_id, name))
         entities.append(OmletFanManualSpeedSelect(coordinator, device_id, name))
         entities.append(OmletFanTimeSpeed1Select(coordinator, device_id, name))
-        for cls in (OmletFanTimeSpeed2Select, OmletFanTimeSpeed3Select, OmletFanTimeSpeed4Select):
-            entity = cls(coordinator, device_id, name)
-            entities.append(entity)
-            dynamic_entities.append(entity)
+        entities.append(OmletFanTimeSpeed2Select(coordinator, device_id, name))
+        entities.append(OmletFanTimeSpeed3Select(coordinator, device_id, name))
+        entities.append(OmletFanTimeSpeed4Select(coordinator, device_id, name))
         entities.append(OmletFanThermostatSpeedSelect(coordinator, device_id, name))
 
     async_add_entities(entities)
-    _sync_time_speed_visibility(hass, coordinator, dynamic_entities)
 
 
 class OmletFanModeSelect(OmletEntity, SelectEntity):
@@ -117,7 +114,6 @@ class OmletFanManualSpeedSelect(OmletEntity, SelectEntity):
 class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
     _OPTIONS = ["Low", "Medium", "High"]
     _MAP = {"Low": FAN_SPEED_MAP["low"], "Medium": FAN_SPEED_MAP["medium"], "High": FAN_SPEED_MAP["high"]}
-    _SLOT_INDEX = 1
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
@@ -126,25 +122,18 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
         self._attr_entity_category = EntityCategory.CONFIG
-        self._slot_index = self._SLOT_INDEX
-        self._dynamic_slot = self._slot_index >= 2
 
     def _fan_cfg(self) -> dict[str, Any]:
         return (self.coordinator.data.get(self.device_id, {}) or {}).get("configuration", {}).get("fan", {}) or {}
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        if not self._dynamic_slot:
-            return
         if not self.hass or not self.entity_id:
             return
-        fan_cfg = self._fan_cfg()
         ent_reg = async_get_entity_registry(self.hass)
-        _update_registry_visibility(
-            ent_reg,
-            self.entity_id,
-            hide=not _slot_is_configured(fan_cfg, self._slot_index),
-        )
+        reg_entry = ent_reg.async_get(self.entity_id)
+        if reg_entry and reg_entry.hidden_by == er.RegistryEntryHider.INTEGRATION:
+            ent_reg.async_update_entity(self.entity_id, hidden_by=None)
 
     @property
     def current_option(self) -> str | None:
@@ -170,8 +159,6 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
 
 
 class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
-    _SLOT_INDEX = 2
-
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
         self._attr_name = "Time Spd 2"
@@ -201,8 +188,6 @@ class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
 
 
 class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
-    _SLOT_INDEX = 3
-
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
         self._attr_name = "Time Spd 3"
@@ -232,8 +217,6 @@ class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
 
 
 class OmletFanTimeSpeed4Select(OmletFanTimeSpeed2Select):
-    _SLOT_INDEX = 4
-
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
         self._attr_name = "Time Spd 4"
@@ -299,57 +282,3 @@ class OmletFanThermostatSpeedSelect(OmletEntity, SelectEntity):
             cycle_if_on=True,
         )
 
-
-def _slot_is_configured(fan_cfg: dict[str, Any], slot: int) -> bool:
-    """Return True if the slot has a real on/off time set."""
-    on_val = fan_cfg.get(f"timeOn{slot}")
-    off_val = fan_cfg.get(f"timeOff{slot}")
-    return (on_val and on_val != "00:00") or (off_val and off_val != "00:00")
-
-
-def _update_registry_visibility(ent_reg, entity_id: str, *, hide: bool) -> None:
-    reg_entry = ent_reg.async_get(entity_id)
-    if not reg_entry:
-        return
-    if hide:
-        if reg_entry.hidden_by != er.RegistryEntryHider.USER:
-            if reg_entry.hidden_by != er.RegistryEntryHider.INTEGRATION:
-                ent_reg.async_update_entity(
-                    entity_id,
-                    hidden_by=er.RegistryEntryHider.INTEGRATION,
-                )
-    else:
-        if reg_entry.hidden_by == er.RegistryEntryHider.INTEGRATION:
-            ent_reg.async_update_entity(entity_id, hidden_by=None)
-
-
-def _sync_time_speed_visibility(hass, coordinator, entities: list[OmletFanTimeSpeed1Select]) -> None:
-    """Hide/show time speed slots 2-4 based on current config."""
-    ent_reg = async_get_entity_registry(hass)
-
-    def _update_for_device(device_id: str, fan_cfg: dict[str, Any]) -> None:
-        for entity in entities:
-            if entity.device_id != device_id or not getattr(entity, "_dynamic_slot", False):
-                continue
-            if not entity.entity_id:
-                continue
-            _update_registry_visibility(
-                ent_reg,
-                entity.entity_id,
-                hide=not _slot_is_configured(fan_cfg, entity._slot_index),
-            )
-
-    # Initial sync
-    for device_id in {e.device_id for e in entities}:
-        device_data = coordinator.data.get(device_id, {}) or {}
-        fan_cfg = (device_data.get("configuration", {}) or {}).get("fan", {}) or {}
-        _update_for_device(device_id, fan_cfg)
-
-    # Listen for future updates
-    def _handle_update() -> None:
-        for device_id in {e.device_id for e in entities}:
-            device_data = coordinator.data.get(device_id, {}) or {}
-            fan_cfg = (device_data.get("configuration", {}) or {}).get("fan", {}) or {}
-            _update_for_device(device_id, fan_cfg)
-
-    coordinator.async_add_listener(_handle_update)
