@@ -32,14 +32,16 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
         self,
         coordinator,
         device_id: str,
-        device_name: str,
+        _device_name: str,
         *,
         native_min_c: float,
         native_max_c: float,
         native_step: float,
     ) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = f"{device_name} {self._LABEL}"
+        # With has_entity_name=True, HA will prefix the device name automatically.
+        # Keep the entity name short for mobile UI.
+        self._attr_name = self._LABEL
         self._attr_unique_id = f"{device_id}_{self._CFG_KEY}"
         self._attr_has_entity_name = True
         self._attr_native_step = native_step
