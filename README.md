@@ -1,138 +1,173 @@
-[![GitHub release](https://img.shields.io/github/release/krozgrov/ha-omlet-integration.svg)](https://github.com/krozgrov/ha-omlet-integration/releases) [![GitHub stars](https://img.shields.io/github/stars/krozgrov/ha-omlet-integration.svg)](https://github.com/krozgrov/ha-omlet-integration/stargazers) ![GitHub License](https://img.shields.io/github/license/krozgrov/ha-omlet-integration)
+[![GitHub release](https://img.shields.io/github/release/krozgrov/ha-omlet-integration.svg)](https://github.com/krozgrov/ha-omlet-integration/releases)
+[![GitHub stars](https://img.shields.io/github/stars/krozgrov/ha-omlet-integration.svg)](https://github.com/krozgrov/ha-omlet-integration/stargazers)
+![GitHub License](https://img.shields.io/github/license/krozgrov/ha-omlet-integration)
 
 # Omlet Smart Chicken Coop Integration for Home Assistant
 
-An integration for Home Assistant that connects your Omlet Smart Coop devices—including the Smart Automatic Chicken Coop Door and Smart Coop Fan—enabling monitoring and control directly from Home Assistant using the Omlet official API.
+An integration for Home Assistant that connects your Omlet Smart Coop devices—including the Smart Automatic Chicken Coop Door and Smart Coop Fan—enabling monitoring and control directly from Home Assistant using the official Omlet API.
 
 ---
 
-## 2025.12.19 - Smart Fan Integration
+## 2025.12.19 – Smart Fan Update
 
-- **New**: Smart Coop Fan integration with configuration entities for mode, manual speed, time slots, and thermostatic thresholds.
-- **Note**: Home Assistant must be **restarted** after updating the integration for entity names/services to refresh in the UI.
+- **New**: Full Smart Coop Fan support (mode, manual speed, time slots, thermostatic thresholds).
+- **Note**: Home Assistant **must be restarted** after updating the integration.
 
 ---
 
 ## Sponsor
 
-A lot of effort is going into this integration. So if you can afford it and want to support me:
+If you find this integration useful, consider supporting development:
 
-<a href="https://www.buymeacoffee.com/krozgrov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
+<a href="https://www.buymeacoffee.com/krozgrov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;"></a>
 
 ---
 
-## Features
+# **Smart Door Features**
 
-- **Device Support:** Automatically detects supported Omlet devices including the Smart Automatic Chicken Coop Door and the Smart Chicken Coop Fan.
-- **Entity Creation:** Monitor battery, light, Wi-Fi health, fan status, ambient conditions, and configuration settings.
-- **Actions:** Trigger door open/close, control lights, fan on/off or Boost mode (when supported).
-- **Service Calls:** Door actions, configuration updates, schedules.
-- **Webhooks:** Real-time updates without polling delays.
+The Smart Automatic Chicken Coop Door includes:
 
-### Screenshots – Core Actions & Device States
+- Open/close control
+- Light control (if your Omlet setup supports it)
+- Automatic detection of door state (open, closed, blocked)
+- Light & ambient sensor readings
+- Battery and Wi-Fi signal monitoring
+- Webhook support for real-time state updates
 
-| Smart Door Controls | Device Details |
+### **Smart Door Screenshots**
+
+| Door Controls | Device Details |
 |---|---|
-| ![Screenshot 1](https://github.com/user-attachments/assets/76ad0dac-3198-4cbc-beb4-4022b8c24e25) | ![Screenshot 2](https://github.com/user-attachments/assets/6977606f-8a54-491c-8a00-efdff07e8cff) |
+| ![](https://github.com/user-attachments/assets/76ad0dac-3198-4cbc-beb4-4022b8c24e25) | ![](https://github.com/user-attachments/assets/6977606f-8a54-491c-8a00-efdff07e8cff) |
 
 ---
 
-## Fan Configuration (GUI + Automations)
+# **Smart Fan Features**
 
-Fan settings are exposed as Home Assistant entities and compatible with built-in automation services:
+The Smart Coop Fan exposes granular configuration and automation entities:
 
-- **Mode**: (“Manual”, “Time”, “Thermostatic”)  
-- **Manual speed**: (“Low”, “Medium”, “High”)  
-- **Time schedule (Slot 1)**: on/off times + speed  
-- **Thermostatic thresholds**: temp on/off + speed  
+### **Fan Modes**
 
-### Screenshots – Fan Settings
+- **Manual** mode  
+- **Time-based** mode (On/Off with per-slot fan speed)
+- **Thermostatic** mode (Turn on/off based on temperature thresholds)
 
-| Fan Control / Sensors | Configuration Settings | Diagnostics |
-|---|---|---|
-| ![Fan Slot 1](https://github.com/user-attachments/assets/35ff5858-1859-4daa-aa2d-5c5a209cdae7) | ![Configuration](https://github.com/user-attachments/assets/caf649ca-f55b-4aa9-b18e-629254209845) | ![Diagnostics](https://github.com/user-attachments/assets/af98d638-3ba0-46fd-bc9d-9d34dbe09c2a) |
+### **Entities Provided**
 
-| Fan Mode Action | Smart Fan Actions | Notifications |
-|---|---|---|
-| ![Mode Action](https://github.com/user-attachments/assets/152ffe4e-a795-4f4d-8a99-dc7d64fc0a55) | ![Fan Actions](https://github.com/user-attachments/assets/1cb0983b-49d4-4dc7-be35-e75613e7fee0) | ![Notifications](https://github.com/user-attachments/assets/0240aba4-f831-4cf1-a4cf-c2ba295200b7) |
-
-Note: This fan is designed to **ventilate** (air movement), not cool like an A/C.
+- Ambient temperature & humidity sensors  
+- Fan state (on/off), mode, and speed  
+- Time schedule entities (S1-1, S1-2, S1-3)  
+- Thermostatic threshold & speed entities  
+- Boost mode (if supported by your model)  
+- Diagnostics entities (temperature, signal strength, battery, etc.)
 
 ---
 
-## Installation
+## **Smart Fan Screenshots**
 
-### Prerequisites
+### Control, Configuration, and Diagnostics
+
+| Fan Control & Sensors | Configuration Settings | Diagnostics |
+|---|---|---|
+| ![](https://github.com/user-attachments/assets/35ff5858-1859-4daa-aa2d-5c5a209cdae7) | ![](https://github.com/user-attachments/assets/caf649ca-f55b-4aa9-b18e-629254209845) | ![](https://github.com/user-attachments/assets/af98d638-3ba0-46fd-bc9d-9d34dbe09c2a) |
+
+### Fan Modes, Actions, and Notifications
+
+| Fan Mode View | Smart Fan Actions | Notifications |
+|---|---|---|
+| ![](https://github.com/user-attachments/assets/152ffe4e-a795-4f4d-8a99-dc7d64fc0a55) | ![](https://github.com/user-attachments/assets/1cb0983b-49d4-4dc7-be35-e75613e7fee0) | ![](https://github.com/user-attachments/assets/0240aba4-f831-4cf1-a4cf-c2ba295200b7) |
+
+**Note:** This fan is designed to **ventilate** (air movement), not cool like an A/C.
+
+---
+
+# **Installation**
+
+## Prerequisites
+
 1. A working Home Assistant installation.
-2. An Omlet account with API access (generate an API key).
+2. An Omlet account with an API key (generate in Omlet account settings).
 
-### Manual Installation
-1. Download the repository as a ZIP.
-2. Extract to `custom_components/omlet_smart_coop`.
+---
+
+## Manual Installation
+
+1. Download this repository as a ZIP.
+2. Extract into:  
+   `custom_components/omlet_smart_coop`
 3. Restart Home Assistant.
 
-### Using HACS
-Recommended:
-1. HACS → Integrations → Search for **Omlet Smart Coop**.
-2. Install latest release and restart Home Assistant.
+---
 
-Alternative (only if needed):
-1. Add repository to HACS as Custom Repository.
-2. URL: `https://github.com/krozgrov/ha-omlet-integration`, Type: Integration.
-3. Install and restart.
+## Install via HACS (Recommended)
+
+1. Open **HACS → Integrations**
+2. Search for **Omlet Smart Coop**
+3. Install and restart Home Assistant
+
+If it doesn’t appear in search:
+
+1. Add a custom repository  
+   URL: `https://github.com/krozgrov/ha-omlet-integration`  
+   Type: Integration  
+2. Install and restart
 
 ---
 
-## Configuration
+# **Configuration**
 
-1. **Settings → Devices & Services → Add Integration**
-2. Search **Omlet Integration**
-3. Enter API key + polling interval.
+1. Home Assistant → **Settings → Devices & Services → Add Integration**
+2. Search for **Omlet Integration**
+3. Enter your API key and polling interval
 
 ### Configuration Screenshots
 
 | Initial Setup | Device Discovery |
 |---|---|
-| ![Config 1](https://github.com/user-attachments/assets/739eb66d-94af-430d-bf85-c28ba6825508) | ![Config 2](https://github.com/user-attachments/assets/371c9547-eb1d-4569-911a-b65d358fb1b7) |
+| ![](https://github.com/user-attachments/assets/739eb66d-94af-430d-bf85-c28ba6825508) | ![](https://github.com/user-attachments/assets/371c9547-eb1d-4569-911a-b65d358fb1b7) |
 
 ---
 
-## API Details
+# **API Details**
 
-This integration uses the [Omlet API](https://smart.omlet.com/developers/api#/).  
-Key endpoints:
-- `/device` – Retrieve device info
-- `/device/{deviceId}/action/{action}` – Trigger actions
-- `/device/{deviceId}/configuration` – Update configuration
+This integration uses the official [Omlet API](https://smart.omlet.com/developers/api#/).
+
+### Endpoints Used
+- `/device` – Retrieve device information  
+- `/device/{deviceId}/action/{action}` – Trigger actions  
+- `/device/{deviceId}/configuration` – Update device configuration  
 
 ---
 
-## Webhooks (Real-Time Updates)
+# **Webhooks (Real-Time Updates)**
 
-Enable webhooks for push-based updates (no polling delay):
+To avoid polling delays, enable webhooks:
 
-- Integration Options → Enable webhooks (optionally set `webhook_token`)
-- Integration displays webhook URL in a Home Assistant notification
-- Configure webhook in the Omlet Developer Portal
-- Choose events (door open/close, light, etc.)
+1. Enable **webhooks** in the integration options  
+2. (Optional) Set a `webhook_token`  
+3. Integration shows the webhook URL in a notification  
+4. Add this URL in the **Omlet Developer Portal → Manage Webhooks**
 
 Modes:
-- **Legacy polling:** Use interval setting (default)
-- **Webhooks only:** Disable polling in Options
+
+- **Polling + Webhooks (default)**  
+- **Webhooks only**: Enable “Disable polling” in options  
+- **Polling only**: Disable webhooks
 
 ---
 
-## License
+# License
 
 MIT License – see [LICENSE](LICENSE) for details.
 
 ---
 
-## Support
+# Support
 
-Open an [issue](https://github.com/krozgrov/ha-omlet-integration/issues).  
+For issues or feature requests, open an issue:  
+https://github.com/krozgrov/ha-omlet-integration/issues
 
-For bug reports, enable debug logging:
+To debug, enable:
 
 ```yaml
 logger:
