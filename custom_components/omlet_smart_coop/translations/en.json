@@ -49,26 +49,5 @@
       "turn_light_on": "Turn the light on",
       "turn_light_off": "Turn the light off"
     }
-  },
-  "entity": {
-    "sensor": {
-      "battery_level": {
-        "name": "Battery Level"
-      },
-      "wifi_signal_strength": {
-        "name": "WiFi Signal Strength"
-      },
-      "firmware_version": {
-        "name": "Firmware Version"
-      }
-    },
-    "switch": {
-      "light": {
-        "name": "Light"
-      },
-      "door": {
-        "name": "Door"
-      }
-    }
   }
 }

@@ -37,11 +37,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 class _OmletFanTimeBase(OmletEntity, TimeEntity):
     _CFG_KEY: str
-    _LABEL: str
+    _TRANSLATION_KEY: str
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = self._LABEL
+        self._attr_translation_key = self._TRANSLATION_KEY
         self._attr_unique_id = f"{device_id}_{self._CFG_KEY}"
         self._attr_has_entity_name = True
         self._attr_entity_category = EntityCategory.CONFIG
@@ -71,39 +71,39 @@ class _OmletFanTimeBase(OmletEntity, TimeEntity):
 
 class OmletFanTimeOn1(_OmletFanTimeBase):
     _CFG_KEY = "timeOn1"
-    _LABEL = "03: S1-1 On"
+    _TRANSLATION_KEY = "fan_time_on_1"
 
 
 class OmletFanTimeOff1(_OmletFanTimeBase):
     _CFG_KEY = "timeOff1"
-    _LABEL = "03: S1-2 Off"
+    _TRANSLATION_KEY = "fan_time_off_1"
 
 
 class OmletFanTimeOn2(_OmletFanTimeBase):
     _CFG_KEY = "timeOn2"
-    _LABEL = "03: S2-1 On"
+    _TRANSLATION_KEY = "fan_time_on_2"
 
 
 class OmletFanTimeOff2(_OmletFanTimeBase):
     _CFG_KEY = "timeOff2"
-    _LABEL = "03: S2-2 Off"
+    _TRANSLATION_KEY = "fan_time_off_2"
 
 
 class OmletFanTimeOn3(_OmletFanTimeBase):
     _CFG_KEY = "timeOn3"
-    _LABEL = "03: S3-1 On"
+    _TRANSLATION_KEY = "fan_time_on_3"
 
 
 class OmletFanTimeOff3(_OmletFanTimeBase):
     _CFG_KEY = "timeOff3"
-    _LABEL = "03: S3-2 Off"
+    _TRANSLATION_KEY = "fan_time_off_3"
 
 
 class OmletFanTimeOn4(_OmletFanTimeBase):
     _CFG_KEY = "timeOn4"
-    _LABEL = "03: S4-1 On"
+    _TRANSLATION_KEY = "fan_time_on_4"
 
 
 class OmletFanTimeOff4(_OmletFanTimeBase):
     _CFG_KEY = "timeOff4"
-    _LABEL = "03: S4-2 Off"
+    _TRANSLATION_KEY = "fan_time_off_4"

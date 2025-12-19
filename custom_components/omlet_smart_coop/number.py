@@ -26,7 +26,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
 class _OmletFanNumberBase(OmletEntity, NumberEntity):
     _CFG_KEY: str
-    _LABEL: str
+    _TRANSLATION_KEY: str
 
     def __init__(
         self,
@@ -41,7 +41,7 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
         super().__init__(coordinator, device_id)
         # With has_entity_name=True, HA will prefix the device name automatically.
         # Keep the entity name short for mobile UI.
-        self._attr_name = self._LABEL
+        self._attr_translation_key = self._TRANSLATION_KEY
         self._attr_unique_id = f"{device_id}_{self._CFG_KEY}"
         self._attr_has_entity_name = True
         self._attr_native_step = native_step
@@ -88,7 +88,7 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
 
 class OmletFanTempOn(_OmletFanNumberBase):
     _CFG_KEY = "tempOn"
-    _LABEL = "04: Tstat On"
+    _TRANSLATION_KEY = "fan_temp_on"
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(
@@ -103,7 +103,7 @@ class OmletFanTempOn(_OmletFanNumberBase):
 
 class OmletFanTempOff(_OmletFanNumberBase):
     _CFG_KEY = "tempOff"
-    _LABEL = "04: Tstat Off"
+    _TRANSLATION_KEY = "fan_temp_off"
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(

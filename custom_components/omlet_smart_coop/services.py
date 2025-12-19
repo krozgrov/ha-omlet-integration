@@ -3,6 +3,7 @@
 from __future__ import annotations
 import asyncio
 import logging
+import inspect
 from typing import Any
 from aiohttp import ClientError
 from aiohttp.web import Response
@@ -16,6 +17,7 @@ from homeassistant.helpers.device_registry import async_get as async_get_device_
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.network import get_url
+from homeassistant.helpers.service import async_extract_entity_ids
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .coordinator import OmletDataCoordinator
@@ -85,16 +87,16 @@ def _iter_coordinators(hass: HomeAssistant) -> list[OmletDataCoordinator]:
 
 
 async def _resolve_targets(
-    hass: HomeAssistant, call_data: dict
+    hass: HomeAssistant, call: ServiceCall
 ) -> list[tuple[OmletDataCoordinator, list[str]]]:
     """Resolve the service call target into (coordinator, [device_ids]) pairs."""
     results: list[tuple[OmletDataCoordinator, list[str]]] = []
     for coord in _iter_coordinators(hass):
-        ids = await get_integration_device_ids(hass, coord, call_data, log_errors=False)
+        ids = await get_integration_device_ids(hass, coord, call, log_errors=False)
         if ids:
             results.append((coord, ids))
     if not results:
-        _LOGGER.error("No matching Omlet devices found. Service call data: %s", call_data)
+        _LOGGER.error("No matching Omlet devices found. Service call data: %s", call.data)
     return results
 
 
@@ -127,14 +129,14 @@ async def _fan_patch_and_refresh(
 async def get_integration_device_ids(
     hass: HomeAssistant,
     coordinator: OmletDataCoordinator,
-    call_data: dict,
+    call: ServiceCall,
     *,
     log_errors: bool = True,
 ) -> list[str]:
     """Map Home Assistant device identifiers to integration device IDs."""
     # Read from call data (HA injects target refs into device_id/entity_id)
+    call_data = call.data
     device_ids = call_data.get("device_id", [])
-    entity_id = call_data.get("entity_id")
     device_name = call_data.get("name")
 
     _LOGGER.debug("Full service call data: %s", call_data)
@@ -143,12 +145,15 @@ async def get_integration_device_ids(
     if not isinstance(device_ids, list):
         device_ids = [device_ids] if device_ids else []
 
-    # Normalize entity_ids to a list
-    entity_ids: list[str] = []
-    if isinstance(entity_id, list):
-        entity_ids = entity_id
-    elif isinstance(entity_id, str) and entity_id:
-        entity_ids = [entity_id]
+    # Resolve entity_ids from targets (supports device/area/label selection)
+    try:
+        resolved = async_extract_entity_ids(hass, call)
+        if inspect.isawaitable(resolved):
+            resolved = await resolved
+        entity_ids = list(resolved)
+    except Exception as err:
+        _LOGGER.debug("Failed to resolve entity_ids from service target: %s", err)
+        entity_ids = []
 
     _LOGGER.debug("Processing device IDs: %s", device_ids)
 
@@ -281,9 +286,9 @@ async def async_register_services(
     async def _targets(call: ServiceCall) -> list[tuple[OmletDataCoordinator, list[str]]]:
         """Return (coordinator, [device_ids]) for this call."""
         if coordinator is not None:
-            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            ids = await get_integration_device_ids(hass, coordinator, call)
             return [(coordinator, ids)] if ids else []
-        return await _resolve_targets(hass, call.data)
+        return await _resolve_targets(hass, call)
 
     async def handle_show_webhook_url(call: ServiceCall) -> None:
         """Show the webhook URL and status via notification and log."""
