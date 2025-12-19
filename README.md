@@ -8,7 +8,7 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 
 ---
 
-## Pre-release: 2025.12.20b3
+## Pre-release: 2025.12.20b4
 
 - **Fix**: Webhook handler now responds immediately and refreshes in the background to prevent Omlet disabling webhooks on slow API calls.
 - **Fix**: Unified webhook token parsing across headers, query params, and JSON body.
@@ -17,6 +17,7 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 - **Improvement**: Service targets now support device/area/label selection in the UI.
 - **Improvement**: Entity names now use `translation_key` + `strings.json` for localization.
 - **Improvement**: Diagnostics data is available via `diagnostics.py`; runtime state attributes are reduced.
+- **Fix**: Translations now live only in `strings.json` so entity labels render correctly in English.
 
 ---
 
