@@ -6,10 +6,12 @@
 
 An integration for Home Assistant that connects your Omlet Smart Coop devices—including the Smart Automatic Chicken Coop Door and Smart Coop Fan—enabling monitoring and control directly from Home Assistant using the Omlet official API.
 
-## Pre-release: 2025.12.20b1
+## Pre-release: 2025.12.20b2
 
 - **Fix**: Webhook handler now responds immediately and refreshes in the background to prevent Omlet disabling webhooks on slow API calls.
 - **Fix**: Unified webhook token parsing across headers, query params, and JSON body.
+- **Fix**: Options translations no longer override each other in `en.json`.
+- **Chore**: Options update listener is now cleaned up on unload.
 
 ## 2025.12.19 - Smart Fan Integration
 
