@@ -72,12 +72,43 @@ class _OmletFanTimeBase(OmletEntity, TimeEntity):
         )
         await self.coordinator.async_request_refresh()
 
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        if not self._dynamic_slot or self._slot_index <= 1:
+            return
+        if not self.hass or not self.entity_id:
+            return
+        device_data = self.coordinator.data.get(self.device_id, {}) or {}
+        fan_cfg = (device_data.get("configuration", {}) or {}).get("fan", {}) or {}
+        ent_reg = async_get_entity_registry(self.hass)
+        _update_registry_visibility(
+            ent_reg,
+            self.entity_id,
+            hide=not _slot_is_configured(fan_cfg, self._slot_index),
+        )
+
 
 def _slot_is_configured(fan_cfg: dict[str, Any], slot: int) -> bool:
     """Return True if the slot has a real on/off time set."""
     on_val = fan_cfg.get(f"timeOn{slot}")
     off_val = fan_cfg.get(f"timeOff{slot}")
     return (on_val and on_val != "00:00") or (off_val and off_val != "00:00")
+
+
+def _update_registry_visibility(ent_reg, entity_id: str, *, hide: bool) -> None:
+    reg_entry = ent_reg.async_get(entity_id)
+    if not reg_entry:
+        return
+    if hide:
+        if reg_entry.hidden_by != er.RegistryEntryHider.USER:
+            if reg_entry.hidden_by != er.RegistryEntryHider.INTEGRATION:
+                ent_reg.async_update_entity(
+                    entity_id,
+                    hidden_by=er.RegistryEntryHider.INTEGRATION,
+                )
+    else:
+        if reg_entry.hidden_by == er.RegistryEntryHider.INTEGRATION:
+            ent_reg.async_update_entity(entity_id, hidden_by=None)
 
 
 def _sync_time_slot_visibility(hass, coordinator, entities: list[_OmletFanTimeBase]) -> None:
@@ -92,19 +123,11 @@ def _sync_time_slot_visibility(hass, coordinator, entities: list[_OmletFanTimeBa
                 continue
             if not entity.entity_id:
                 continue
-            hide = not _slot_is_configured(fan_cfg, entity._slot_index)
-            reg_entry = ent_reg.async_get(entity.entity_id)
-            if not reg_entry:
-                continue
-            if hide:
-                if reg_entry.hidden_by != er.RegistryEntryHider.USER:
-                    ent_reg.async_update_entity(
-                        entity.entity_id,
-                        hidden_by=er.RegistryEntryHider.INTEGRATION,
-                    )
-            else:
-                if reg_entry.hidden_by == er.RegistryEntryHider.INTEGRATION:
-                    ent_reg.async_update_entity(entity.entity_id, hidden_by=None)
+            _update_registry_visibility(
+                ent_reg,
+                entity.entity_id,
+                hide=not _slot_is_configured(fan_cfg, entity._slot_index),
+            )
 
     # Initial sync
     for device_id in {e.device_id for e in entities}:
