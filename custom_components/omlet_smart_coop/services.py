@@ -20,6 +20,7 @@ from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .coordinator import OmletDataCoordinator
 from .fan_helpers import FAN_SPEED_MAP, schedule_followup_refresh
+from .webhook_helpers import get_expected_webhook_token, get_provided_webhook_token
 from .const import (
     DOMAIN,
     SERVICE_OPEN_DOOR,
@@ -352,25 +353,25 @@ async def async_register_services(
             if enabled:
                 # Register new webhook handler (simple refresh-only handler)
                 async def _handle_webhook(hass, webhook_id_recv, request):
+                    payload = None
                     try:
-                        payload = None
                         try:
                             payload = await request.json()
                         except Exception:
                             pass
-                        expected = entry.options.get("webhook_token")
-                        provided = (
-                            request.headers.get("X-Omlet-Token")
-                            or (payload or {}).get("token")
-                            or (payload or {}).get("secret")
-                            or request.query.get("token")
-                        )
+                        expected = get_expected_webhook_token(entry)
+                        provided = get_provided_webhook_token(request, payload)
                         if expected and (not provided or provided != expected):
                             return Response(status=401, text="invalid token")
-                        await hass.data[DOMAIN][entry.entry_id]["coordinator"].async_request_refresh()
-                        return Response(text="ok")
                     except Exception:
-                        return Response(status=500, text="error")
+                        return Response(status=200, text="ok")
+                    try:
+                        hass.async_create_task(
+                            hass.data[DOMAIN][entry.entry_id]["coordinator"].async_request_refresh()
+                        )
+                    except Exception:
+                        pass
+                    return Response(text="ok")
 
                 hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", new_id, _handle_webhook)
                 try:
