@@ -17,7 +17,7 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 
 A lot of effort is going into this integration. So if you can afford it and want to support me:
 
-[Buy Me A Coffee](https://www.buymeacoffee.com/krozgrov)
+<a href="https://www.buymeacoffee.com/krozgrov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
 
 ---
 
@@ -48,13 +48,13 @@ Fan settings are exposed as Home Assistant entities and compatible with built-in
 
 ### Screenshots – Fan Settings
 
-| Fan Control | Extended Config | Thermostatic View |
+| Fan Control / Sensors | Configuration Settings | Diagnostics |
 |---|---|---|
-| ![Fan Slot 1](https://github.com/user-attachments/assets/35ff5858-1859-4daa-aa2d-5c5a209cdae7) | ![Fan Slot 2](https://github.com/user-attachments/assets/caf649ca-f55b-4aa9-b18e-629254209845) | ![Fan Slot 3](https://github.com/user-attachments/assets/af98d638-3ba0-46fd-bc9d-9d34dbe09c2a) |
+| ![Fan Slot 1](https://github.com/user-attachments/assets/35ff5858-1859-4daa-aa2d-5c5a209cdae7) | ![Configuration](https://github.com/user-attachments/assets/caf649ca-f55b-4aa9-b18e-629254209845) | ![Diagnostics](https://github.com/user-attachments/assets/af98d638-3ba0-46fd-bc9d-9d34dbe09c2a) |
 
-| Wide View | Slot Controls | Device Tiles |
+| Fan Mode Action | Smart Fan Actions | Notifications |
 |---|---|---|
-| ![Wide Fan Config](https://github.com/user-attachments/assets/152ffe4e-a795-4f4d-8a99-dc7d64fc0a55) | ![Slot Options](https://github.com/user-attachments/assets/1cb0983b-49d4-4dc7-be35-e75613e7fee0) | ![Tiles](https://github.com/user-attachments/assets/0240aba4-f831-4cf1-a4cf-c2ba295200b7) |
+| ![Mode Action](https://github.com/user-attachments/assets/152ffe4e-a795-4f4d-8a99-dc7d64fc0a55) | ![Fan Actions](https://github.com/user-attachments/assets/1cb0983b-49d4-4dc7-be35-e75613e7fee0) | ![Notifications](https://github.com/user-attachments/assets/0240aba4-f831-4cf1-a4cf-c2ba295200b7) |
 
 Note: This fan is designed to **ventilate** (air movement), not cool like an A/C.
 
