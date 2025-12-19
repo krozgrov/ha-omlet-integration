@@ -1,7 +1,7 @@
 import logging
 from typing import Any
 
-from homeassistant.components.number import NumberDeviceClass, NumberEntity
+from homeassistant.components.number import NumberDeviceClass, NumberEntity, NumberMode
 from homeassistant.const import UnitOfTemperature
 from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util.unit_conversion import TemperatureConverter
@@ -45,6 +45,7 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
         self._attr_unique_id = f"{device_id}_{self._CFG_KEY}"
         self._attr_has_entity_name = True
         self._attr_native_step = native_step
+        self._attr_mode = NumberMode.BOX
         self._attr_device_class = NumberDeviceClass.TEMPERATURE
         self._attr_entity_category = EntityCategory.CONFIG
 
@@ -113,5 +114,4 @@ class OmletFanTempOff(_OmletFanNumberBase):
             native_max_c=60,
             native_step=1,
         )
-
 
