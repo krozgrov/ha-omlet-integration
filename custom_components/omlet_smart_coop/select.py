@@ -53,7 +53,7 @@ class OmletFanModeSelect(OmletEntity, SelectEntity):
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = "Fan Mode"
+        self._attr_name = "Mode"
         self._attr_unique_id = f"{device_id}_fan_mode"
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
@@ -86,7 +86,7 @@ class OmletFanManualSpeedSelect(OmletEntity, SelectEntity):
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = "Manual Speed"
+        self._attr_name = "Manual Spd"
         self._attr_unique_id = f"{device_id}_fan_manual_speed"
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
@@ -127,7 +127,7 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = "Speed 1"
+        self._attr_name = "Time Spd 1"
         self._attr_unique_id = f"{device_id}_fan_time_speed_1"
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
@@ -162,7 +162,7 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
 class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
-        self._attr_name = "Speed 2"
+        self._attr_name = "Time Spd 2"
         self._attr_unique_id = f"{device_id}_fan_time_speed_2"
 
     @property
@@ -191,7 +191,7 @@ class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
 class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
-        self._attr_name = "Speed 3"
+        self._attr_name = "Time Spd 3"
         self._attr_unique_id = f"{device_id}_fan_time_speed_3"
 
     @property
@@ -220,7 +220,7 @@ class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
 class OmletFanTimeSpeed4Select(OmletFanTimeSpeed2Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
-        self._attr_name = "Speed 4"
+        self._attr_name = "Time Spd 4"
         self._attr_unique_id = f"{device_id}_fan_time_speed_4"
 
     @property
@@ -252,7 +252,7 @@ class OmletFanThermostatSpeedSelect(OmletEntity, SelectEntity):
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = "Temp Speed"
+        self._attr_name = "Tstat Spd"
         self._attr_unique_id = f"{device_id}_fan_thermostat_speed"
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
@@ -282,5 +282,3 @@ class OmletFanThermostatSpeedSelect(OmletEntity, SelectEntity):
             {"tempSpeed": self._MAP[option]},
             cycle_if_on=True,
         )
-
-

@@ -162,6 +162,16 @@ class OmletFan(OmletEntity, FanEntity):
             # can behave unexpectedly (mode may immediately take over). For predictable
             # manual control from the HA fan entity, switch to manual first.
             mode = (self._fan_config().get("mode") or "").lower()
+            if mode in {"temperature", "time"} and getattr(self, "hass", None):
+                friendly = "Thermostatic" if mode == "temperature" else "Time"
+                pn.async_create(
+                    self.hass,
+                    (
+                        f"Fan is configured for {friendly} mode. Home Assistant will switch to "
+                        "Manual for direct control when turning the fan on."
+                    ),
+                    title="Omlet Smart Coop: Fan Mode Changed",
+                )
             if mode and mode != "manual":
                 try:
                     await self.coordinator.api_client.patch_device_configuration(
@@ -169,22 +179,6 @@ class OmletFan(OmletEntity, FanEntity):
                     )
                     # Give the device a brief moment to apply the mode switch before actioning "on".
                     await asyncio.sleep(0.5)
-                    if getattr(self, "hass", None):
-                        friendly = (
-                            "Thermostatic"
-                            if mode == "temperature"
-                            else "Time"
-                            if mode == "time"
-                            else mode
-                        )
-                        pn.async_create(
-                            self.hass,
-                            (
-                                f"Fan was in {friendly} mode. Home Assistant turned the fan on and "
-                                "switched mode to Manual for direct control."
-                            ),
-                            title="Omlet Smart Coop: Fan Mode Changed",
-                        )
                 except Exception as err:
                     _LOGGER.debug("Failed to switch fan mode to manual before turning on: %r", err)
             await self._execute_action(self._ACTION_ON)
