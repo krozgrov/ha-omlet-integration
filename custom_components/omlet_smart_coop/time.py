@@ -71,39 +71,39 @@ class _OmletFanTimeBase(OmletEntity, TimeEntity):
 
 class OmletFanTimeOn1(_OmletFanTimeBase):
     _CFG_KEY = "timeOn1"
-    _LABEL = "03: Slot 1 A On"
+    _LABEL = "03: S1-1 On"
 
 
 class OmletFanTimeOff1(_OmletFanTimeBase):
     _CFG_KEY = "timeOff1"
-    _LABEL = "03: Slot 1 B Off"
+    _LABEL = "03: S1-2 Off"
 
 
 class OmletFanTimeOn2(_OmletFanTimeBase):
     _CFG_KEY = "timeOn2"
-    _LABEL = "03: Slot 2 A On"
+    _LABEL = "03: S2-1 On"
 
 
 class OmletFanTimeOff2(_OmletFanTimeBase):
     _CFG_KEY = "timeOff2"
-    _LABEL = "03: Slot 2 B Off"
+    _LABEL = "03: S2-2 Off"
 
 
 class OmletFanTimeOn3(_OmletFanTimeBase):
     _CFG_KEY = "timeOn3"
-    _LABEL = "03: Slot 3 A On"
+    _LABEL = "03: S3-1 On"
 
 
 class OmletFanTimeOff3(_OmletFanTimeBase):
     _CFG_KEY = "timeOff3"
-    _LABEL = "03: Slot 3 B Off"
+    _LABEL = "03: S3-2 Off"
 
 
 class OmletFanTimeOn4(_OmletFanTimeBase):
     _CFG_KEY = "timeOn4"
-    _LABEL = "03: Slot 4 A On"
+    _LABEL = "03: S4-1 On"
 
 
 class OmletFanTimeOff4(_OmletFanTimeBase):
     _CFG_KEY = "timeOff4"
-    _LABEL = "03: Slot 4 B Off"
+    _LABEL = "03: S4-2 Off"

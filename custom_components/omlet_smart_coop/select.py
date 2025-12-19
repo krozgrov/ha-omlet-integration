@@ -117,7 +117,7 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
 
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = "03: Slot 1 C Spd"
+        self._attr_name = "03: S1-3 Spd"
         self._attr_unique_id = f"{device_id}_fan_time_speed_1"
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
@@ -161,7 +161,7 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
 class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
-        self._attr_name = "03: Slot 2 C Spd"
+        self._attr_name = "03: S2-3 Spd"
         self._attr_unique_id = f"{device_id}_fan_time_speed_2"
 
     @property
@@ -190,7 +190,7 @@ class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
 class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
-        self._attr_name = "03: Slot 3 C Spd"
+        self._attr_name = "03: S3-3 Spd"
         self._attr_unique_id = f"{device_id}_fan_time_speed_3"
 
     @property
@@ -219,7 +219,7 @@ class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
 class OmletFanTimeSpeed4Select(OmletFanTimeSpeed2Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
-        self._attr_name = "03: Slot 4 C Spd"
+        self._attr_name = "03: S4-3 Spd"
         self._attr_unique_id = f"{device_id}_fan_time_speed_4"
 
     @property
