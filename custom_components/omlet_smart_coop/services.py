@@ -731,6 +731,12 @@ async def async_register_services(
             on_time = _fmt_time_hhmm(call.data.get("on_time"))
             off_time = _fmt_time_hhmm(call.data.get("off_time"))
             time_speed = call.data.get("time_speed")
+            update_requested = bool(on_time or off_time or time_speed is not None)
+            if clear_requested and update_requested:
+                _LOGGER.error(
+                    "Cannot update time slot while clearing. Use either on_time/off_time/time_speed or clear_slot."
+                )
+                return
             has_time_fields = bool(clear_requested or on_time or off_time or time_speed is not None)
 
             if has_time_fields:

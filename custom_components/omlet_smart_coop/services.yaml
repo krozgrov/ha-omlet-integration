@@ -263,7 +263,7 @@ set_fan_mode:
           mode: dropdown
     clear_slot:
       name: Clear Slot
-      description: (Time slots) Which slot to clear (2-4). Defaults to 2. (Legacy values 1-3 will still be accepted as 2-4.)
+      description: (Time slots) Which slot to clear (2-4). Defaults to 2. (Legacy values 1-3 will still be accepted as 2-4.) Mutually exclusive with on_time/off_time/time_speed.
       required: false
       selector:
         number:
@@ -303,5 +303,4 @@ set_fan_mode:
             - label: High
               value: high
           mode: dropdown
-
 
