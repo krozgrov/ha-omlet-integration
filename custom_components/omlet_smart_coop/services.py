@@ -13,6 +13,7 @@ from homeassistant.components import persistent_notification as pn
 from homeassistant.components import webhook as hass_webhook
 import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.network import get_url
 from homeassistant.util.unit_conversion import TemperatureConverter
@@ -733,10 +734,9 @@ async def async_register_services(
             time_speed = call.data.get("time_speed")
             update_requested = bool(on_time or off_time or time_speed is not None)
             if clear_requested and update_requested:
-                _LOGGER.error(
+                raise ServiceValidationError(
                     "Cannot update time slot while clearing. Use either on_time/off_time/time_speed or clear_slot."
                 )
-                return
             has_time_fields = bool(clear_requested or on_time or off_time or time_speed is not None)
 
             if has_time_fields:
