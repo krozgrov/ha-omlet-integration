@@ -1,20 +1,25 @@
 """Services for the Omlet Smart Coop integration."""
 
 from __future__ import annotations
+import asyncio
 import logging
 from typing import Any
 from aiohttp import ClientError
 from aiohttp.web import Response
 
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.const import UnitOfTemperature
 from homeassistant.components import persistent_notification as pn
 from homeassistant.components import webhook as hass_webhook
 import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.network import get_url
+from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .coordinator import OmletDataCoordinator
+from .fan_helpers import FAN_SPEED_MAP, schedule_followup_refresh
 from .const import (
     DOMAIN,
     SERVICE_OPEN_DOOR,
@@ -43,9 +48,87 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+def _bool_with_default(value: Any, default: bool) -> bool:
+    """Return bool(value) but treat None as 'use default'."""
+    if value is None:
+        return bool(default)
+    return bool(value)
+
+
+def _fmt_time_hhmm(value: Any) -> str | None:
+    """Normalize HA time selector value into HH:MM string."""
+    if value is None:
+        return None
+    if isinstance(value, str):
+        parts = value.split(":")
+        if len(parts) >= 2:
+            return f"{parts[0]:0>2}:{parts[1]:0>2}"
+        return None
+    # datetime.time-like
+    try:
+        return value.strftime("%H:%M")
+    except Exception:
+        return None
+
+
+def _iter_coordinators(hass: HomeAssistant) -> list[OmletDataCoordinator]:
+    """Return active coordinators for this integration."""
+    out: list[OmletDataCoordinator] = []
+    domain_bucket = hass.data.get(DOMAIN, {}) or {}
+    for entry_bucket in domain_bucket.values():
+        if isinstance(entry_bucket, dict):
+            coord = entry_bucket.get("coordinator")
+            if isinstance(coord, OmletDataCoordinator):
+                out.append(coord)
+    return out
+
+
+async def _resolve_targets(
+    hass: HomeAssistant, call_data: dict
+) -> list[tuple[OmletDataCoordinator, list[str]]]:
+    """Resolve the service call target into (coordinator, [device_ids]) pairs."""
+    results: list[tuple[OmletDataCoordinator, list[str]]] = []
+    for coord in _iter_coordinators(hass):
+        ids = await get_integration_device_ids(hass, coord, call_data, log_errors=False)
+        if ids:
+            results.append((coord, ids))
+    if not results:
+        _LOGGER.error("No matching Omlet devices found. Service call data: %s", call_data)
+    return results
+
+
+async def _fan_patch_and_refresh(
+    hass: HomeAssistant,
+    coordinator: OmletDataCoordinator,
+    device_id: str,
+    fan_patch: dict[str, Any],
+    *,
+    apply_immediately: bool = False,
+) -> None:
+    """Patch fan configuration and refresh. Optionally cycle off/on to apply immediately."""
+    await coordinator.api_client.patch_device_configuration(device_id, {"fan": fan_patch})
+
+    if apply_immediately:
+        device_data = coordinator.data.get(device_id, {}) or {}
+        state = ((device_data.get("state") or {}).get("fan") or {}).get("state") or ""
+        if str(state).lower() in {"on", "onpending", "boost", "boostpending", "offpending"}:
+            try:
+                await coordinator.api_client.execute_action(f"device/{device_id}/action/off")
+                await asyncio.sleep(0.5)
+                await coordinator.api_client.execute_action(f"device/{device_id}/action/on")
+            except Exception as err:
+                _LOGGER.debug("Fan apply_immediately cycle failed for %s: %r", device_id, err)
+
+    await coordinator.async_request_refresh()
+    schedule_followup_refresh(hass, coordinator, (1.5, 5.0))
+
 
 async def get_integration_device_ids(
-    hass: HomeAssistant, coordinator: OmletDataCoordinator, call_data: dict
+    hass: HomeAssistant,
+    coordinator: OmletDataCoordinator,
+    call_data: dict,
+    *,
+    log_errors: bool = True,
 ) -> list[str]:
     """Map Home Assistant device identifiers to integration device IDs."""
     # Read from call data (HA injects target refs into device_id/entity_id)
@@ -122,7 +205,10 @@ async def get_integration_device_ids(
 
     # Validate the resolved device_ids
     if not integration_device_ids:
-        _LOGGER.error("No valid device IDs found. Service call data: %s", call_data)
+        if log_errors:
+            _LOGGER.error("No valid device IDs found. Service call data: %s", call_data)
+        else:
+            _LOGGER.debug("No valid device IDs found for this coordinator")
         return []
 
     # Verify all devices exist in the coordinator
@@ -131,19 +217,72 @@ async def get_integration_device_ids(
         if device_id in coordinator.devices:
             valid_ids.append(device_id)
         else:
-            _LOGGER.error(
-                "Device ID %s not found in coordinator data. Available devices: %s",
-                device_id,
-                list(coordinator.devices.keys()),
-            )
+            if log_errors:
+                _LOGGER.error(
+                    "Device ID %s not found in coordinator data. Available devices: %s",
+                    device_id,
+                    list(coordinator.devices.keys()),
+                )
+            else:
+                _LOGGER.debug("Device ID %s not found in coordinator data", device_id)
 
     return valid_ids
 
 
 async def async_register_services(
-    hass: HomeAssistant, coordinator: OmletDataCoordinator
+    hass: HomeAssistant, coordinator: OmletDataCoordinator | None = None
 ) -> None:
     """Register services for Omlet Smart Coop."""
+    domain_bucket = hass.data.setdefault(DOMAIN, {})
+
+    # Defensive cleanup: during rapid dev prereleases, legacy fan services can linger
+    # in HA if the user reloads instead of fully restarting. Remove *any* old fan
+    # services except the single canonical one: set_fan_mode.
+    removed: list[str] = []
+    try:
+        existing = hass.services.async_services().get(DOMAIN, {}) or {}
+        for svc in list(existing.keys()):
+            if svc in {"set_fan_mode"}:
+                continue
+            if svc.startswith("set_fan_") or svc.startswith("clear_fan_"):
+                try:
+                    hass.services.async_remove(DOMAIN, svc)
+                    removed.append(svc)
+                except Exception:
+                    pass
+    except Exception:
+        # If the service registry isn't ready for introspection, fall back to a best-effort list.
+        for svc in (
+            "set_fan_manual_speed",
+            "set_fan_time_slot",
+            "clear_fan_time_slot",
+            "set_fan_time_slot_1",
+            "set_fan_thermostatic",
+        ):
+            try:
+                hass.services.async_remove(DOMAIN, svc)
+                removed.append(svc)
+            except Exception:
+                pass
+
+    if removed:
+        _LOGGER.info("Removed legacy Omlet fan services: %s", ", ".join(sorted(set(removed))))
+
+    # Don't early-return on upgrades/reloads: make registration idempotent so new
+    # services added in dev prereleases (e.g. turn_fan_on/off) still get registered
+    # even if HA didn't fully restart.
+
+    def _register(service: str, handler) -> None:
+        if hass.services.has_service(DOMAIN, service):
+            return
+        hass.services.async_register(DOMAIN, service, handler)
+
+    async def _targets(call: ServiceCall) -> list[tuple[OmletDataCoordinator, list[str]]]:
+        """Return (coordinator, [device_ids]) for this call."""
+        if coordinator is not None:
+            ids = await get_integration_device_ids(hass, coordinator, call.data)
+            return [(coordinator, ids)] if ids else []
+        return await _resolve_targets(hass, call.data)
 
     async def handle_show_webhook_url(call: ServiceCall) -> None:
         """Show the webhook URL and status via notification and log."""
@@ -267,27 +406,26 @@ async def async_register_services(
     async def handle_open_door(call: ServiceCall) -> None:
         """Handle the open door service call."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
-            for device_id in integration_device_ids:
-                try:
-                    await coordinator.api_client.execute_action(
-                        f"device/{device_id}/action/open"
-                    )
-                    _LOGGER.info(
-                        "Successfully opened door for device: %s",
-                        coordinator.devices[device_id]["name"],
-                    )
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to open door for device %s: %s", device_id, err
-                    )
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        await coord.api_client.execute_action(
+                            f"device/{device_id}/action/open"
+                        )
+                        _LOGGER.info(
+                            "Successfully opened door for device: %s",
+                            coord.devices[device_id]["name"],
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to open door for device %s: %s", device_id, err
+                        )
 
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except ClientError as err:
             _LOGGER.error("API error while opening door: %s", err)
@@ -297,40 +435,88 @@ async def async_register_services(
     async def handle_close_door(call: ServiceCall) -> None:
         """Handle the close door service call."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
-            for device_id in integration_device_ids:
-                try:
-                    await coordinator.api_client.execute_action(
-                        f"device/{device_id}/action/close"
-                    )
-                    _LOGGER.info(
-                        "Successfully closed door for device: %s",
-                        coordinator.devices[device_id]["name"],
-                    )
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to close door for device %s: %s", device_id, err
-                    )
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        await coord.api_client.execute_action(
+                            f"device/{device_id}/action/close"
+                        )
+                        _LOGGER.info(
+                            "Successfully closed door for device: %s",
+                            coord.devices[device_id]["name"],
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to close door for device %s: %s", device_id, err
+                        )
 
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except ClientError as err:
             _LOGGER.error("API error while closing door: %s", err)
         except Exception as err:
             _LOGGER.error("Failed to process close door command: %s", err)
 
+    async def _fan_action_and_refresh(
+        coord: OmletDataCoordinator, device_id: str, action: str
+    ) -> None:
+        """Execute a fan action (on/off) and refresh state."""
+        await coord.api_client.execute_action(f"device/{device_id}/action/{action}")
+        await coord.async_request_refresh()
+        schedule_followup_refresh(hass, coord, (1.5, 5.0))
+
+    async def handle_turn_fan_on(call: ServiceCall) -> None:
+        """Turn fan on immediately."""
+        try:
+            targets = await _targets(call)
+            if not targets:
+                return
+            force_manual = _bool_with_default(call.data.get("force_manual"), True)
+            for coord, ids in targets:
+                for device_id in ids:
+                    if force_manual:
+                        try:
+                            await coord.api_client.patch_device_configuration(
+                                device_id, {"fan": {"mode": "manual"}}
+                            )
+                        except Exception:
+                            # Still attempt turn on even if mode patch fails
+                            pass
+                    await _fan_action_and_refresh(coord, device_id, "on")
+        except Exception as err:
+            _LOGGER.error("Failed to turn fan on: %s", err)
+
+    async def handle_turn_fan_off(call: ServiceCall) -> None:
+        """Turn fan off immediately; optionally force manual mode first."""
+        try:
+            targets = await _targets(call)
+            if not targets:
+                return
+            force_manual = _bool_with_default(call.data.get("force_manual"), True)
+            for coord, ids in targets:
+                for device_id in ids:
+                    if force_manual:
+                        try:
+                            await coord.api_client.patch_device_configuration(
+                                device_id, {"fan": {"mode": "manual"}}
+                            )
+                            # Give Omlet a moment to apply mode changes before turning off.
+                            await asyncio.sleep(0.5)
+                        except Exception:
+                            pass
+                    await _fan_action_and_refresh(coord, device_id, "off")
+        except Exception as err:
+            _LOGGER.error("Failed to turn fan off: %s", err)
+
     async def handle_update_overnight_sleep(call: ServiceCall) -> None:
         """Handle updating overnight sleep schedule."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
             # Get configuration parameters
@@ -386,25 +572,26 @@ async def async_register_services(
                 }
             }
 
-            for device_id in integration_device_ids:
-                try:
-                    await coordinator.api_client.patch_device_configuration(
-                        device_id, updated_config
-                    )
-                    _LOGGER.info(
-                        "Successfully updated overnight sleep for device %s with start: %s, end: %s",
-                        coordinator.devices[device_id]["name"],
-                        start_time,
-                        end_time,
-                    )
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to update overnight sleep for device %s: %s",
-                        device_id,
-                        err,
-                    )
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        await coord.api_client.patch_device_configuration(
+                            device_id, updated_config
+                        )
+                        _LOGGER.info(
+                            "Successfully updated overnight sleep for device %s with start: %s, end: %s",
+                            coord.devices[device_id]["name"],
+                            start_time,
+                            end_time,
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to update overnight sleep for device %s: %s",
+                            device_id,
+                            err,
+                        )
 
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except Exception as err:
             _LOGGER.error("Failed to update overnight sleep: %s", err)
@@ -412,10 +599,8 @@ async def async_register_services(
     async def handle_update_door_schedule(call: ServiceCall) -> None:
         """Handle updating door schedule."""
         try:
-            integration_device_ids = await get_integration_device_ids(
-                hass, coordinator, call.data
-            )
-            if not integration_device_ids:
+            targets = await _targets(call)
+            if not targets:
                 return
 
             # Validate door mode
@@ -428,103 +613,243 @@ async def async_register_services(
                 )
                 return
 
-            for device_id in integration_device_ids:
-                try:
-                    # Get current configuration for this device
-                    current_config = (
-                        await coordinator.api_client.get_device_configuration(device_id)
-                    )
-                    door_config = current_config.get("door", {})
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        # Get current configuration for this device
+                        current_config = await coord.api_client.get_device_configuration(device_id)
+                        door_config = current_config.get("door", {})
 
-                    # Apply door mode settings
-                    door_config["openMode"] = door_mode
-                    door_config["closeMode"] = door_mode
+                        # Apply door mode settings
+                        door_config["openMode"] = door_mode
+                        door_config["closeMode"] = door_mode
 
-                    # Handle time settings if mode is "time"
-                    if door_mode == "time":
-                        if ATTR_OPEN_TIME in call.data:
-                            open_time = call.data[ATTR_OPEN_TIME]
-                            if not isinstance(open_time, str):
-                                open_time = open_time.strftime("%H:%M")
-                            else:
-                                open_time_parts = open_time.split(":")
-                                open_time = (
-                                    f"{open_time_parts[0]:0>2}:{open_time_parts[1]:0>2}"
-                                    if len(open_time_parts) >= 2
-                                    else "00:00"
-                                )
-                            door_config["openTime"] = open_time
+                        # Handle time settings if mode is "time"
+                        if door_mode == "time":
+                            if ATTR_OPEN_TIME in call.data:
+                                open_time = call.data[ATTR_OPEN_TIME]
+                                if not isinstance(open_time, str):
+                                    open_time = open_time.strftime("%H:%M")
+                                else:
+                                    open_time_parts = open_time.split(":")
+                                    open_time = (
+                                        f"{open_time_parts[0]:0>2}:{open_time_parts[1]:0>2}"
+                                        if len(open_time_parts) >= 2
+                                        else "00:00"
+                                    )
+                                door_config["openTime"] = open_time
 
-                        if ATTR_CLOSE_TIME in call.data:
-                            close_time = call.data[ATTR_CLOSE_TIME]
-                            if not isinstance(close_time, str):
-                                close_time = close_time.strftime("%H:%M")
-                            else:
-                                close_time_parts = close_time.split(":")
-                                close_time = (
-                                    f"{close_time_parts[0]:0>2}:{close_time_parts[1]:0>2}"
-                                    if len(close_time_parts) >= 2
-                                    else "00:00"
-                                )
-                            door_config["closeTime"] = close_time
+                            if ATTR_CLOSE_TIME in call.data:
+                                close_time = call.data[ATTR_CLOSE_TIME]
+                                if not isinstance(close_time, str):
+                                    close_time = close_time.strftime("%H:%M")
+                                else:
+                                    close_time_parts = close_time.split(":")
+                                    close_time = (
+                                        f"{close_time_parts[0]:0>2}:{close_time_parts[1]:0>2}"
+                                        if len(close_time_parts) >= 2
+                                        else "00:00"
+                                    )
+                                door_config["closeTime"] = close_time
 
-                    # Handle light settings if mode is "light"
-                    elif door_mode == "light":
-                        field_mapping = {
-                            "open_light_level": "openLightLevel",
-                            "close_light_level": "closeLightLevel",
-                            "open_delay": "openDelay",
-                            "close_delay": "closeDelay",
-                        }
+                        # Handle light settings if mode is "light"
+                        elif door_mode == "light":
+                            field_mapping = {
+                                "open_light_level": "openLightLevel",
+                                "close_light_level": "closeLightLevel",
+                                "open_delay": "openDelay",
+                                "close_delay": "closeDelay",
+                            }
 
-                        for service_field, api_field in field_mapping.items():
-                            if service_field in call.data:
-                                door_config[api_field] = call.data[service_field]
+                            for service_field, api_field in field_mapping.items():
+                                if service_field in call.data:
+                                    door_config[api_field] = call.data[service_field]
 
-                    # Update configuration for this device
-                    response_data = (
-                        await coordinator.api_client.patch_device_configuration(
+                        # Update configuration for this device
+                        response_data = await coord.api_client.patch_device_configuration(
                             device_id, {"door": door_config}
                         )
-                    )
 
-                    if response_data:
-                        _LOGGER.debug(
-                            "Door schedule update response for device %s: %s",
-                            coordinator.devices[device_id]["name"],
-                            response_data,
+                        if response_data:
+                            _LOGGER.debug(
+                                "Door schedule update response for device %s: %s",
+                                coord.devices[device_id]["name"],
+                                response_data,
+                            )
+
+                        _LOGGER.info(
+                            "Successfully updated door schedule for device: %s",
+                            coord.devices[device_id]["name"],
                         )
 
-                    _LOGGER.info(
-                        "Successfully updated door schedule for device: %s",
-                        coordinator.devices[device_id]["name"],
-                    )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to update door schedule for device %s: %s",
+                            device_id,
+                            err,
+                        )
 
-                except Exception as err:
-                    _LOGGER.error(
-                        "Failed to update door schedule for device %s: %s",
-                        device_id,
-                        err,
-                    )
-
-            await coordinator.async_request_refresh()
+                await coord.async_request_refresh()
 
         except ClientError as err:
             _LOGGER.error("API error while updating door schedule: %s", err)
         except Exception as err:
             _LOGGER.error("Failed to update door schedule: %s", err)
 
-    # Register all services
-    hass.services.async_register(DOMAIN, SERVICE_OPEN_DOOR, handle_open_door)
-    hass.services.async_register(DOMAIN, SERVICE_CLOSE_DOOR, handle_close_door)
-    hass.services.async_register(
-        DOMAIN, SERVICE_UPDATE_OVERNIGHT_SLEEP, handle_update_overnight_sleep
-    )
-    hass.services.async_register(
-        DOMAIN, SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule
-    )
-    hass.services.async_register(DOMAIN, SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
-    hass.services.async_register(DOMAIN, "regenerate_webhook_id", handle_regenerate_webhook_id)
+    async def handle_set_fan_mode(call: ServiceCall) -> None:
+        """Set fan mode (manual/time/thermostatic) and optionally apply mode-specific settings."""
+        try:
+            targets = await _targets(call)
+            if not targets:
+                return
+            mode = (call.data.get("mode") or "").lower()
+            # Omlet uses "temperature" for thermostatic mode; accept legacy "thermostatic" too.
+            if mode == "thermostatic":
+                mode = "temperature"
+            if mode not in {"manual", "time", "temperature"}:
+                _LOGGER.error("Invalid fan mode: %s", mode)
+                return
+            patch: dict[str, Any] = {"mode": mode}
+
+            # Manual mode: optional manual speed (Low/Medium/High).
+            manual_speed = call.data.get("manual_speed")
+            if mode == "manual" and manual_speed is not None:
+                manual_speed = str(manual_speed).lower()
+                if manual_speed not in FAN_SPEED_MAP:
+                    _LOGGER.error("Invalid manual_speed: %s", manual_speed)
+                    return
+                patch["manualSpeed"] = FAN_SPEED_MAP[manual_speed]
+
+            # Time mode: optional slot config and/or clear.
+            # Time slot settings are valid regardless of current mode; only set
+            # mode="time" if the caller explicitly chose Time mode.
+            # Clearing is driven by `clear_slot` (new behavior). We still accept
+            # legacy `clear_time_slot` boolean for older calls.
+            clear_slot_sel = call.data.get("clear_slot")
+            clear_requested = bool(clear_slot_sel is not None) or _bool_with_default(
+                call.data.get("clear_time_slot"), False
+            )
+            on_time = _fmt_time_hhmm(call.data.get("on_time"))
+            off_time = _fmt_time_hhmm(call.data.get("off_time"))
+            time_speed = call.data.get("time_speed")
+            update_requested = bool(on_time or off_time or time_speed is not None)
+            if clear_requested and update_requested:
+                raise ServiceValidationError(
+                    "Cannot update time slot while clearing. Use either on_time/off_time/time_speed or clear_slot."
+                )
+            has_time_fields = bool(clear_requested or on_time or off_time or time_speed is not None)
+
+            if has_time_fields:
+                # Updating slot: allow 1-4 (slot 1 is allowed for updates).
+                time_slot = call.data.get("time_slot")
+                # Back-compat: if old field "slot" is provided and NOT clearing, treat it as time_slot.
+                if time_slot is None and call.data.get("slot") is not None and not clear_requested:
+                    time_slot = call.data.get("slot")
+
+                if time_slot is not None:
+                    try:
+                        slot_i = int(time_slot)
+                    except (TypeError, ValueError):
+                        _LOGGER.error("Invalid time_slot value: %s", time_slot)
+                        return
+                    if slot_i not in (1, 2, 3, 4):
+                        _LOGGER.error("Invalid time_slot (must be 1-4): %s", time_slot)
+                        return
+                else:
+                    slot_i = 1
+
+                # Back-compat: if old field "slot" is provided and clearing, treat it as clear_slot selector.
+                if clear_slot_sel is None and call.data.get("slot") is not None and clear_requested:
+                    clear_slot_sel = call.data.get("slot")
+
+                if on_time:
+                    patch[f"timeOn{slot_i}"] = on_time
+                if off_time:
+                    patch[f"timeOff{slot_i}"] = off_time
+
+                if time_speed is not None:
+                    time_speed = str(time_speed).lower()
+                    if time_speed not in FAN_SPEED_MAP:
+                        _LOGGER.error("Invalid time_speed: %s", time_speed)
+                        return
+                    patch[f"timeSpeed{slot_i}"] = FAN_SPEED_MAP[time_speed]
+
+                # If the user asked to clear the slot, make sure that wins even if
+                # the service UI sent other fields (it often retains prior values).
+                if clear_requested:
+                    if clear_slot_sel is not None:
+                        try:
+                            clear_i = int(clear_slot_sel)
+                        except (TypeError, ValueError):
+                            _LOGGER.error("Invalid clear_slot value: %s", clear_slot_sel)
+                            return
+                        # Accept:
+                        # - New behavior: 2-4 are direct API slots
+                        # - Legacy behavior: 1-3 map to API slots 2-4
+                        if clear_i in (2, 3, 4):
+                            clear_slot_i = clear_i
+                        elif clear_i in (1, 2, 3):
+                            clear_slot_i = clear_i + 1
+                        else:
+                            _LOGGER.error("Invalid clear_slot (must be 2-4; legacy 1-3 accepted): %s", clear_slot_sel)
+                            return
+                    else:
+                        clear_slot_i = 2
+
+                    patch[f"timeOn{clear_slot_i}"] = "00:00"
+                    patch[f"timeOff{clear_slot_i}"] = "00:00"
+                    # Reset speed as well to avoid Omlet treating the slot as configured.
+                    patch[f"timeSpeed{clear_slot_i}"] = 100
+                    _LOGGER.debug("Clearing time slot %s (API slot %s)", clear_slot_sel, clear_slot_i)
+
+            # Thermostatic mode (API mode="temperature"): optional temp on/off + speed.
+            if mode == "temperature":
+                if call.data.get("temp_on") is not None:
+                    api_val = TemperatureConverter.convert(
+                        float(call.data["temp_on"]),
+                        hass.config.units.temperature_unit,
+                        UnitOfTemperature.CELSIUS,
+                    )
+                    patch["tempOn"] = int(round(api_val))
+                if call.data.get("temp_off") is not None:
+                    api_val = TemperatureConverter.convert(
+                        float(call.data["temp_off"]),
+                        hass.config.units.temperature_unit,
+                        UnitOfTemperature.CELSIUS,
+                    )
+                    patch["tempOff"] = int(round(api_val))
+                thermo_speed = call.data.get("thermostatic_speed")
+                if thermo_speed is not None:
+                    thermo_speed = str(thermo_speed).lower()
+                    if thermo_speed not in FAN_SPEED_MAP:
+                        _LOGGER.error("Invalid thermostatic_speed: %s", thermo_speed)
+                        return
+                    patch["tempSpeed"] = FAN_SPEED_MAP[thermo_speed]
+
+            apply_immediately = _bool_with_default(call.data.get("apply_immediately"), True)
+            for coord, ids in targets:
+                for device_id in ids:
+                    await _fan_patch_and_refresh(
+                        hass,
+                        coord,
+                        device_id,
+                        patch,
+                        apply_immediately=apply_immediately,
+                    )
+        except Exception as err:
+            _LOGGER.error("Failed to set fan mode: %s", err)
+
+    # Register all services (idempotent)
+    _register(SERVICE_OPEN_DOOR, handle_open_door)
+    _register(SERVICE_CLOSE_DOOR, handle_close_door)
+    _register(SERVICE_UPDATE_OVERNIGHT_SLEEP, handle_update_overnight_sleep)
+    _register(SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule)
+    _register(SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
+    _register("regenerate_webhook_id", handle_regenerate_webhook_id)
+    _register("turn_fan_on", handle_turn_fan_on)
+    _register("turn_fan_off", handle_turn_fan_off)
+    _register("set_fan_mode", handle_set_fan_mode)
+    domain_bucket["_services_registered"] = True
 
 
 def async_remove_services(hass: HomeAssistant) -> None:
@@ -536,5 +861,12 @@ def async_remove_services(hass: HomeAssistant) -> None:
         SERVICE_UPDATE_DOOR_SCHEDULE,
         SERVICE_SHOW_WEBHOOK_URL,
         "regenerate_webhook_id",
+        "turn_fan_on",
+        "turn_fan_off",
+        "set_fan_mode",
     ]:
         hass.services.async_remove(DOMAIN, service)
+    try:
+        hass.data.get(DOMAIN, {}).pop("_services_registered", None)
+    except Exception:
+        pass

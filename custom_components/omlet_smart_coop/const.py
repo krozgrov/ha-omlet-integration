@@ -11,6 +11,9 @@ PLATFORMS: list[Platform] = [
     Platform.COVER,
     Platform.LIGHT,
     Platform.FAN,
+    Platform.SELECT,
+    Platform.TIME,
+    Platform.NUMBER,
 ]
 
 # Configuration keys

@@ -37,6 +37,8 @@ _LOGGER = logging.getLogger(__name__)
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Omlet Smart Coop integration."""
     hass.data.setdefault(DOMAIN, {})
+    # Register services at startup so they remain available even if an entry reload fails.
+    await async_register_services(hass, None)
     return True
 
 
@@ -60,6 +62,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Store the coordinator in hass.data
     hass.data[DOMAIN][entry.entry_id] = {"coordinator": coordinator}
+
+    # Ensure services are registered even if HA hasn't been restarted (dev upgrades).
+    # Registration is idempotent in services.py.
+    try:
+        await async_register_services(hass, None)
+    except Exception as ex:
+        _LOGGER.warning("Service registration during setup_entry failed: %r", ex)
 
     # One-time setup tip: guide users to enable webhooks in Options
     try:
@@ -282,14 +291,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     except Exception as ex:
         _LOGGER.exception("Failed to set up webhook: %r", ex)
 
-    # Register services
-    try:
-        await async_register_services(hass, coordinator)
-        _LOGGER.debug("Successfully registered Omlet Smart Coop services")
-    except Exception as ex:
-        _LOGGER.error("Failed to register services: %s", ex)
-        return False
-
     # Forward the entry to platforms
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
@@ -312,9 +313,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator = entry_data.get("coordinator")
         if coordinator:
             await coordinator.async_shutdown()
-
-        # Remove services last
-        async_remove_services(hass)
 
         # Unregister webhook if present
         try:

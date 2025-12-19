@@ -206,16 +206,32 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
     sensors = []
     for device_id, device_data in coordinator.data.items():
-        device_type = device_data.get("deviceType", "").lower()
-        
+        state = device_data.get("state", {}) or {}
+        config = device_data.get("configuration", {}) or {}
+        device_type = (device_data.get("deviceType") or "").lower()
+        has_fan_state = bool(state.get("fan"))
+        has_fan_config = bool(config.get("fan"))
+        fan_available = has_fan_state or has_fan_config
+        # Detect stand-alone fan hardware so we can keep door/light specific sensors off it
+        is_pure_fan_device = (
+            "fan" in device_type and not state.get("door") and not state.get("light")
+        )
+
         for key, description in SENSOR_TYPES.items():
-            # Skip fan sensors for non-fan devices
-            if key.startswith("fan_") and device_type != "fan":
+            # Only surface fan sensors when the device actually reports fan data
+            if key.startswith("fan_") and not fan_available:
                 continue
-            # Skip door/light sensors for fan devices
-            if (key.startswith("door_") or key.startswith("light_") or key in ["last_open_time", "last_close_time"]) and device_type == "fan":
+            # Avoid creating door/light-specific sensors for dedicated fan hardware
+            if (
+                is_pure_fan_device
+                and (
+                    key.startswith("door_")
+                    or key.startswith("light_")
+                    or key in ["last_open_time", "last_close_time"]
+                )
+            ):
                 continue
-                
+
             value = extract_sensor_value(key, device_data)
             if value is not None:
                 sensors.append(
@@ -289,7 +305,11 @@ def extract_sensor_value(sensor_key, device_data):
     if sensor_key == "fan_humidity":
         return state.get("fan", {}).get("humidity")
     if sensor_key == "fan_mode":
-        return config.get("fan", {}).get("mode")
+        mode = config.get("fan", {}).get("mode")
+        # Omlet uses "temperature" internally; present as "thermostatic" for UI consistency.
+        if isinstance(mode, str) and mode.lower() == "temperature":
+            return "thermostatic"
+        return mode
     if sensor_key == "fan_manual_speed":
         return config.get("fan", {}).get("manualSpeed")
     if sensor_key == "fan_temp_on":
