@@ -18,9 +18,14 @@ close_door:
 update_overnight_sleep:
   name: Update Overnight Sleep Schedule
   description: Update the overnight sleep schedule settings
-  target:
-    device: {}
   fields:
+    device_id:
+      name: Device
+      description: The Omlet Smart Coop device to update
+      required: true
+      selector:
+        device:
+          integration: omlet_smart_coop
     enabled:
       name: Enable Overnight Sleep
       description: Enable or disable overnight sleep mode
