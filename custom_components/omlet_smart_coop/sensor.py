@@ -1,7 +1,6 @@
 """Support for Omlet sensors."""
 
 from datetime import datetime
-from zoneinfo import ZoneInfo
 from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,

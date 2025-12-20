@@ -1,5 +1,4 @@
 from homeassistant.components.cover import CoverEntity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 from .entity import OmletEntity
 import logging

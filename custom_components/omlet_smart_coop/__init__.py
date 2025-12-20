@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 
 from .coordinator import OmletDataCoordinator
-from .services import async_register_services, async_remove_services
+from .services import async_register_services
 from .const import (
     DOMAIN,
     PLATFORMS,
-    CONF_POLLING_INTERVAL,    
+    CONF_POLLING_INTERVAL,
     CONF_DEFAULT_POLLING_INTERVAL,
     CONF_ENABLE_WEBHOOKS,
     CONF_WEBHOOK_ID,

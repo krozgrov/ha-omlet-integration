@@ -381,7 +381,7 @@ async def async_register_services(
                 hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", new_id, _handle_webhook)
                 try:
                     url = hass_webhook.async_generate_url(hass, new_id)
-                except Exception as gen_err:
+                except Exception:
                     try:
                         base = get_url(hass)
                         url = f"{base}/api/webhook/{new_id}"
