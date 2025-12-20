@@ -26,6 +26,7 @@ from homeassistant.helpers.network import get_url
 import time
 from homeassistant.helpers import entity_registry as er
 from .const import CONF_WEBHOOK_TIP_SHOWN
+from .webhook_helpers import get_expected_webhook_token, get_provided_webhook_token
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -201,6 +202,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
             async def _handle_webhook(hass, webhook_id_recv, request):
                 """Handle incoming Omlet webhook events."""
+                payload = None
                 try:
                     # Debounce rapid events
                     ts = time.monotonic()
@@ -209,20 +211,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     if ts - last < 1.0:
                         return Response(status=200, text="ok")
                     entry_bucket["_last_webhook_ts"] = ts
-                    payload = None
                     try:
                         payload = await request.json()
                     except Exception:
                         _LOGGER.debug("Webhook received non-JSON payload")
 
                     # Optional token validation
-                    expected = entry.options.get("webhook_token") or entry.options.get("token") or entry.options.get("secret") or entry.options.get("WEBHOOK_TOKEN")
-                    provided = (
-                        request.headers.get("X-Omlet-Token")
-                        or (payload or {}).get("token")
-                        or (payload or {}).get("secret")
-                        or request.query.get("token")
-                    )
+                    expected = get_expected_webhook_token(entry)
+                    provided = get_provided_webhook_token(request, payload)
                     if expected:
                         if not provided or provided != expected:
                             _LOGGER.warning("Rejected webhook: invalid token")
@@ -240,12 +236,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                         )
                     except Exception:
                         _LOGGER.debug("Webhook event received (details redacted)")
-                    # Refresh data to sync state post-event
-                    await coordinator.async_request_refresh()
-                    return Response(status=200, text="ok")
                 except Exception as ex:
                     _LOGGER.error("Error handling webhook: %s", ex)
-                    return Response(status=500, text="error")
+                    return Response(status=200, text="ok")
+                # Refresh data to sync state post-event (async so webhook returns fast).
+                try:
+                    hass.async_create_task(coordinator.async_request_refresh())
+                except Exception as ex:
+                    _LOGGER.debug("Failed to schedule webhook refresh: %r", ex)
+                return Response(status=200, text="ok")
 
             # Register webhook in HA
             # Ensure clean registration
@@ -295,7 +294,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Add an update listener for handling options changes
-    entry.add_update_listener(update_listener)
+    entry.async_on_unload(entry.add_update_listener(update_listener))
 
     return True
 
@@ -377,6 +376,7 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                 pass
 
             async def _handle_webhook(hass, webhook_id_recv, request):
+                payload = None
                 try:
                     ts = time.monotonic()
                     entry_bucket = hass.data[DOMAIN].setdefault(entry.entry_id, {})
@@ -384,19 +384,14 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                     if ts - last < 1.0:
                         return Response(status=200, text="ok")
                     entry_bucket["_last_webhook_ts"] = ts
-                    payload = None
                     try:
                         payload = await request.json()
                     except Exception:
                         pass
-                    expected = entry.options.get("webhook_token")
-                    provided = (
-                        request.headers.get("X-Omlet-Token")
-                        or (payload or {}).get("token")
-                        or (payload or {}).get("secret")
-                        or request.query.get("token")
-                    )
+                    expected = get_expected_webhook_token(entry)
+                    provided = get_provided_webhook_token(request, payload)
                     if expected and (not provided or provided != expected):
+                        _LOGGER.warning("Rejected webhook: invalid token")
                         return Response(status=401, text="invalid token")
                     # Redacted logging: summarize event without secrets
                     try:
@@ -410,10 +405,13 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                         )
                     except Exception:
                         pass
-                    await coordinator.async_request_refresh()
-                    return Response(text="ok")
                 except Exception:
-                    return Response(status=500, text="error")
+                    return Response(status=200, text="ok")
+                try:
+                    hass.async_create_task(coordinator.async_request_refresh())
+                except Exception as ex:
+                    _LOGGER.debug("Failed to schedule webhook refresh: %r", ex)
+                return Response(text="ok")
 
             hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", current_id, _handle_webhook)
             try:

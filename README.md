@@ -8,6 +8,19 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 
 ---
 
+## Pre-release: 2025.12.20b6
+
+- **Fix**: Webhook handler now responds immediately and refreshes in the background to prevent Omlet disabling webhooks on slow API calls.
+- **Fix**: Unified webhook token parsing across headers, query params, and JSON body.
+- **Fix**: Options translations no longer override each other in `en.json`.
+- **Chore**: Options update listener is now cleaned up on unload.
+- **Improvement**: Service targets now support device/area/label selection in the UI.
+- **Improvement**: Entity names now use `translation_key` + `translations/en.json` for localization.
+- **Improvement**: Diagnostics data is available via `diagnostics.py`; runtime state attributes are reduced.
+- **Change**: Removed `device_id` fields from service schemas; use Target selection instead.
+
+---
+
 ## 2025.12.19 – Smart Fan Update
 
 - **New**: Full Smart Coop Fan support (mode, manual speed, time slots, thermostatic thresholds).

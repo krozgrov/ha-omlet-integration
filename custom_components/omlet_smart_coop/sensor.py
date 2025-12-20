@@ -355,7 +355,7 @@ class OmletSensor(OmletEntity, SensorEntity):
         """Initialize the sensor."""
         super().__init__(coordinator, device_id)
         self.entity_description = description
-        self._attr_name = description.key.replace("_", " ").title()
+        self._attr_translation_key = description.key
         self._attr_unique_id = f"{device_id}_{description.key}"
         self._attr_device_class = description.device_class
         self._attr_entity_category = description.entity_category

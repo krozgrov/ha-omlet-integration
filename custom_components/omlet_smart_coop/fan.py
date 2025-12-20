@@ -39,7 +39,7 @@ class OmletFan(OmletEntity, FanEntity):
     _ACTION_BOOST = "boost"
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
-        self._attr_name = f"{device_name} Fan"
+        self._attr_translation_key = "fan"
         self._attr_unique_id = f"{device_id}_fan"
         self._attr_has_entity_name = True
         # Always expose the fan as a basic on/off toggle in HA. Omlet's `actions`

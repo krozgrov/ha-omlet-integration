@@ -37,10 +37,11 @@ class OmletLight(OmletEntity, LightEntity):
     def __init__(self, coordinator, device_id, device_name):
         # Initialize the light entity.
         super().__init__(coordinator, device_id)
-        self._attr_name = f"{device_name} Light"
+        self._attr_translation_key = "light"
         # Keep existing unique_id scheme for backward compatibility
         # Stable unique_id not tied to names
         self._attr_unique_id = f"{device_id}_light"
+        self._attr_has_entity_name = True
         self._attr_supported_color_modes = {
             ColorMode.ONOFF
         }  # Assuming only ON/OFF is supported

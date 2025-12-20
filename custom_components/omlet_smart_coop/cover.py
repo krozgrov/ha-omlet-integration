@@ -55,9 +55,10 @@ class OmletDoorCover(OmletEntity, CoverEntity):
             device_name: The name of the device
         """
         super().__init__(coordinator, device_id)
-        self._attr_name = f"{device_name} Door"
+        self._attr_translation_key = "door"
         # Stable unique_id not tied to names
         self._attr_unique_id = f"{device_id}_door"
+        self._attr_has_entity_name = True
 
     @property
     def available(self):

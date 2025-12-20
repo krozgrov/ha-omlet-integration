@@ -1,0 +1,5 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+select = ["F"]
+src = ["custom_components"]

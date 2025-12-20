@@ -22,17 +22,11 @@
   "options": {
     "step": {
       "user": {
-        "errors": {
-          "invalid_polling_interval": "Invalid polling interval. Must be between 60 and 86400 seconds."
-        }
-      }
-    }
-  },
-  "options": {
-    "step": {
-      "user": {
         "title": "Omlet Smart Coop Options",
         "description": "Configure update method and webhook settings.",
+        "errors": {
+          "invalid_polling_interval": "Invalid polling interval. Must be between 60 and 86400 seconds."
+        },
         "data": {
           "polling_interval": "Polling interval (seconds)",
           "enable_webhooks": "Enable webhooks",
@@ -42,7 +36,7 @@
         "data_description": {
           "polling_interval": "How often to poll the Omlet API when polling is enabled.",
           "enable_webhooks": "Enable a webhook at a random endpoint (shown in a notification) to refresh entities immediately on push events.",
-          "webhook_token": "Shared secret to validate Omlet webhooks. Enter the same token in Omlet → Manage Webhooks.",
+          "webhook_token": "Shared secret to validate Omlet webhooks. Enter the same token in Omlet -> Manage Webhooks.",
           "disable_polling": "Stop scheduled polling and rely only on webhooks for real-time updates."
         }
       }
@@ -57,23 +51,168 @@
     }
   },
   "entity": {
+    "cover": {
+      "door": {
+        "name": "Door"
+      }
+    },
+    "fan": {
+      "fan": {
+        "name": "Fan"
+      }
+    },
+    "light": {
+      "light": {
+        "name": "Light"
+      }
+    },
+    "number": {
+      "fan_temp_on": {
+        "name": "04: Tstat On"
+      },
+      "fan_temp_off": {
+        "name": "04: Tstat Off"
+      }
+    },
+    "select": {
+      "fan_mode": {
+        "name": "01: Mode"
+      },
+      "fan_manual_speed": {
+        "name": "02: Manual Spd"
+      },
+      "fan_time_speed_1": {
+        "name": "03: S1-3 Spd"
+      },
+      "fan_time_speed_2": {
+        "name": "03: S2-3 Spd"
+      },
+      "fan_time_speed_3": {
+        "name": "03: S3-3 Spd"
+      },
+      "fan_time_speed_4": {
+        "name": "03: S4-3 Spd"
+      },
+      "fan_thermostat_speed": {
+        "name": "04: Tstat Spd"
+      }
+    },
     "sensor": {
       "battery_level": {
         "name": "Battery Level"
       },
-      "wifi_signal_strength": {
-        "name": "WiFi Signal Strength"
+      "power_source": {
+        "name": "Power Source"
       },
-      "firmware_version": {
-        "name": "Firmware Version"
+      "uptime": {
+        "name": "Uptime"
+      },
+      "wifi_connected": {
+        "name": "WiFi Connected"
+      },
+      "fan_state": {
+        "name": "Fan State"
+      },
+      "fan_temperature": {
+        "name": "Fan Temperature"
+      },
+      "fan_humidity": {
+        "name": "Fan Humidity"
+      },
+      "fan_mode": {
+        "name": "Fan Mode"
+      },
+      "fan_manual_speed": {
+        "name": "Fan Manual Speed"
+      },
+      "fan_temp_on": {
+        "name": "Fan Temp On"
+      },
+      "fan_temp_off": {
+        "name": "Fan Temp Off"
+      },
+      "fan_temp_speed": {
+        "name": "Fan Thermostatic Speed"
+      },
+      "wifi_ssid": {
+        "name": "WiFi SSID"
+      },
+      "wifi_strength": {
+        "name": "WiFi Strength"
+      },
+      "door_state": {
+        "name": "Door State"
+      },
+      "door_fault": {
+        "name": "Door Fault"
+      },
+      "door_light_level": {
+        "name": "Door Light Level"
+      },
+      "door_open_mode": {
+        "name": "Door Open Mode"
+      },
+      "door_close_mode": {
+        "name": "Door Close Mode"
+      },
+      "light_state": {
+        "name": "Light State"
+      },
+      "light_mode": {
+        "name": "Light Mode"
+      },
+      "light_minutes_before_close": {
+        "name": "Light Minutes Before Close"
+      },
+      "light_max_on_time": {
+        "name": "Light Max On Time"
+      },
+      "light_equipped": {
+        "name": "Light Equipped"
+      },
+      "last_open_time": {
+        "name": "Last Open Time"
+      },
+      "last_close_time": {
+        "name": "Last Close Time"
+      },
+      "door_open_time": {
+        "name": "Door Open Time"
+      },
+      "door_close_time": {
+        "name": "Door Close Time"
+      },
+      "overnight_sleep_start": {
+        "name": "Overnight Sleep Start"
+      },
+      "overnight_sleep_end": {
+        "name": "Overnight Sleep End"
       }
     },
-    "switch": {
-      "light": {
-        "name": "Light"
+    "time": {
+      "fan_time_on_1": {
+        "name": "03: S1-1 On"
       },
-      "door": {
-        "name": "Door"
+      "fan_time_off_1": {
+        "name": "03: S1-2 Off"
+      },
+      "fan_time_on_2": {
+        "name": "03: S2-1 On"
+      },
+      "fan_time_off_2": {
+        "name": "03: S2-2 Off"
+      },
+      "fan_time_on_3": {
+        "name": "03: S3-1 On"
+      },
+      "fan_time_off_3": {
+        "name": "03: S3-2 Off"
+      },
+      "fan_time_on_4": {
+        "name": "03: S4-1 On"
+      },
+      "fan_time_off_4": {
+        "name": "03: S4-2 Off"
       }
     }
   }
