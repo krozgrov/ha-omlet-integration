@@ -12,4 +12,6 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Run Ruff
-        uses: home-assistant/actions/ruff@master
+        uses: astral-sh/ruff-action@v1
+        with:
+          args: "check custom_components"
