@@ -5,28 +5,21 @@ open_door:
   name: Open Door
   description: Open the coop door immediately
   target:
-    device:
-      integration: omlet_smart_coop
     entity:
       domain: cover
-      integration: omlet_smart_coop
 
 close_door:
   name: Close Door
   description: Close the coop door immediately
   target:
-    device:
-      integration: omlet_smart_coop
     entity:
       domain: cover
-      integration: omlet_smart_coop
 
 update_overnight_sleep:
   name: Update Overnight Sleep Schedule
   description: Update the overnight sleep schedule settings
   target:
     device:
-      integration: omlet_smart_coop
   fields:
     enabled:
       name: Enable Overnight Sleep
@@ -69,11 +62,8 @@ update_door_schedule:
   name: Update Door Schedule
   description: Update the automatic door schedule
   target:
-    device:
-      integration: omlet_smart_coop
     entity:
       domain: cover
-      integration: omlet_smart_coop
   fields:
     door_mode:
       name: Door Mode
@@ -144,11 +134,8 @@ turn_fan_on:
   name: Turn Fan On
   description: Turn the fan on immediately (uses Omlet action endpoint). Optionally forces Mode to Manual first.
   target:
-    device:
-      integration: omlet_smart_coop
     entity:
       domain: fan
-      integration: omlet_smart_coop
   fields:
     force_manual:
       name: Force Manual Mode First
@@ -162,11 +149,8 @@ turn_fan_off:
   name: Turn Fan Off
   description: Turn the fan off immediately (uses Omlet action endpoint). Optionally forces Mode to Manual first so it won't auto-restart.
   target:
-    device:
-      integration: omlet_smart_coop
     entity:
       domain: fan
-      integration: omlet_smart_coop
   fields:
     force_manual:
       name: Force Manual Mode First
@@ -180,11 +164,8 @@ set_fan_mode:
   name: Set Fan Mode
   description: Set the fan operating mode (Manual, Time, Thermostatic) and optionally configure mode-specific settings.
   target:
-    device:
-      integration: omlet_smart_coop
     entity:
       domain: fan
-      integration: omlet_smart_coop
   fields:
     mode:
       name: Mode

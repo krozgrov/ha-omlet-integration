@@ -20,13 +20,13 @@
     }
   },
   "options": {
+    "error": {
+      "invalid_polling_interval": "Invalid polling interval. Must be between 60 and 86400 seconds."
+    },
     "step": {
       "user": {
         "title": "Omlet Smart Coop Options",
         "description": "Configure update method and webhook settings.",
-        "errors": {
-          "invalid_polling_interval": "Invalid polling interval. Must be between 60 and 86400 seconds."
-        },
         "data": {
           "polling_interval": "Polling interval (seconds)",
           "enable_webhooks": "Enable webhooks",
