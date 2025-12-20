@@ -19,7 +19,7 @@ update_overnight_sleep:
   name: Update Overnight Sleep Schedule
   description: Update the overnight sleep schedule settings
   target:
-    device:
+    device: {}
   fields:
     enabled:
       name: Enable Overnight Sleep
