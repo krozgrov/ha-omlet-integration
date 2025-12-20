@@ -194,6 +194,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
 
     def _parse_device_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Parse device state data."""
+        parser = DataParser()
         general_fields = [
             "firmwareVersionCurrent",
             "batteryLevel",
