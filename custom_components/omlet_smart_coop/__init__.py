@@ -22,7 +22,6 @@ from homeassistant.components import persistent_notification as pn
 from aiohttp.web import Response
 import secrets
 from homeassistant.helpers.network import get_url
-import time as pytime
 from homeassistant.helpers import entity_registry as er
 from .const import CONF_WEBHOOK_TIP_SHOWN
 from .webhook_helpers import get_expected_webhook_token, get_provided_webhook_token
@@ -203,13 +202,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 """Handle incoming Omlet webhook events."""
                 payload = None
                 try:
-                    # Debounce rapid events
-                    ts = pytime.monotonic()
-                    entry_bucket = hass.data[DOMAIN].setdefault(entry.entry_id, {})
-                    last = entry_bucket.get("_last_webhook_ts", 0.0)
-                    if ts - last < 1.0:
-                        return Response(status=200, text="ok")
-                    entry_bucket["_last_webhook_ts"] = ts
                     try:
                         payload = await request.json()
                     except Exception:
@@ -377,12 +369,6 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
             async def _handle_webhook(hass, webhook_id_recv, request):
                 payload = None
                 try:
-                    ts = pytime.monotonic()
-                    entry_bucket = hass.data[DOMAIN].setdefault(entry.entry_id, {})
-                    last = entry_bucket.get("_last_webhook_ts", 0.0)
-                    if ts - last < 1.0:
-                        return Response(status=200, text="ok")
-                    entry_bucket["_last_webhook_ts"] = ts
                     try:
                         payload = await request.json()
                     except Exception:
