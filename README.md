@@ -8,6 +8,14 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 
 ---
 
+## 2025.12.29 – Webhook Reliability
+
+- **Fix**: Process every webhook event (debounce removed).
+- **Fix**: Return JSON `["ok"]` to better match Omlet webhook expectations.
+- **Change**: Skip webhook token validation for compatibility with Omlet portal behavior.
+
+---
+
 ## 2025.12.20 – Webhooks + Cleanup
 
 - **Fix**: Webhook handler now responds immediately and refreshes in the background to prevent Omlet disabling webhooks on slow API calls.
