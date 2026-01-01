@@ -9,3 +9,6 @@
 - Reintroduced webhook token validation only when a token is set, so default installs remain compatible with Omlet webhook delivery.
 ## 2026-01-01: Webhook validation verified
 - Manual webhook events confirmed delivery with token validation enabled.
+
+## 2026-01-01: Test scaffolding added
+- Added pytest + pytest-homeassistant-custom-component harness and baseline tests for config flow, coordinator refresh, webhook handling, and entity setup.

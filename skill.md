@@ -33,6 +33,9 @@ Risks:
 - Over-mocking HA internals can make tests brittle.
 Tests:
 - Pytest with HA fixtures, minimal mocking of HA core helpers.
+Status: Completed (2026-01-01)
+Validation:
+- Added pytest scaffolding and baseline integration tests for config flow, coordinator, webhook, and entity setup.
 
 3) Metadata and registry audit
 Goal: Ensure all entities/devices are HA-compliant and stable.
