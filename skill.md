@@ -19,6 +19,9 @@ Risks:
 - Misconfigured tokens could block events if Omlet omits the header/body.
 Tests:
 - Webhook handler tests for: no token configured, valid token, invalid token, and non-JSON payload.
+Status: Completed (2026-01-01)
+Validation:
+- Manual webhook tests confirmed delivery with token validation enabled.
 
 2) Test suite for core submission readiness
 Goal: Establish baseline tests required for HA core review.

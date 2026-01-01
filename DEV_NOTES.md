@@ -7,3 +7,5 @@
 
 ## 2025-12-30: Webhook token validation gated by configuration
 - Reintroduced webhook token validation only when a token is set, so default installs remain compatible with Omlet webhook delivery.
+## 2026-01-01: Webhook validation verified
+- Manual webhook events confirmed delivery with token validation enabled.
