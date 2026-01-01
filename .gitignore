@@ -49,3 +49,6 @@ htmlcov/
 .dmypy.json
 .pyre/
 .pytype/
+
+# Local research / comparisons (do not commit)
+_research/

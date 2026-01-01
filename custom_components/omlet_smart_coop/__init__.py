@@ -24,6 +24,7 @@ import secrets
 from homeassistant.helpers.network import get_url
 from homeassistant.helpers import entity_registry as er
 from .const import CONF_WEBHOOK_TIP_SHOWN
+from .webhook_helpers import get_expected_webhook_token, get_provided_webhook_token
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -206,6 +207,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     except Exception:
                         _LOGGER.debug("Webhook received non-JSON payload")
 
+                    expected = get_expected_webhook_token(entry)
+                    if expected:
+                        provided = get_provided_webhook_token(request, payload)
+                        if not provided or provided != expected:
+                            _LOGGER.warning("Rejected webhook: invalid token")
+                            return json_response(["invalid token"], status=401)
+
                     # Redacted logging: never log tokens; summarize event
                     try:
                         evt = (payload or {}).get("payload") or {}
@@ -364,6 +372,12 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                         payload = await request.json()
                     except Exception:
                         pass
+                    expected = get_expected_webhook_token(entry)
+                    if expected:
+                        provided = get_provided_webhook_token(request, payload)
+                        if not provided or provided != expected:
+                            _LOGGER.warning("Rejected webhook: invalid token")
+                            return json_response(["invalid token"], status=401)
                     # Redacted logging: summarize event without secrets
                     try:
                         evt = (payload or {}).get("payload") or {}
