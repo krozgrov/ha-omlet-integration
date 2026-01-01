@@ -12,3 +12,4 @@
 
 ## 2026-01-01: Test scaffolding added
 - Added pytest + pytest-homeassistant-custom-component harness and baseline tests for config flow, coordinator refresh, webhook handling, and entity setup.
+- Aligned test requirements filename to `requirements.test.txt` for consistency with HA testing guidance.
