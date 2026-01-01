@@ -13,3 +13,5 @@
 ## 2026-01-01: Test scaffolding added
 - Added pytest + pytest-homeassistant-custom-component harness and baseline tests for config flow, coordinator refresh, webhook handling, and entity setup.
 - Aligned test requirements filename to `requirements.test.txt` for consistency with HA testing guidance.
+## 2026-01-01: Test layout aligned with HA core style
+- Restructured tests under `tests/components/omlet_smart_coop` with shared fixtures and init helper, following the Brother integration pattern.
