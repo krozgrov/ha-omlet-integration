@@ -8,51 +8,18 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 
 ---
 
-## 2026.01.02 – Webhook Token Compatibility
-
-- **Fix**: Accept Authorization (Bearer) tokens for webhook validation.
-- **Fix**: Handle flat Omlet webhook payloads while keeping nested payload support.
-
----
-
-## 2026.01.01 – Webhook Security Alignment
-
-- **Fix**: Enforce webhook token validation only when a token is configured.
-- **Fix**: Return JSON `["ok"]` to match Omlet webhook expectations.
-- **Fix**: Process every webhook event (debounce removed).
-
----
-
-## 2025.12.29 – Webhook Reliability
-
-- **Fix**: Process every webhook event (debounce removed).
-- **Fix**: Return JSON `["ok"]` to better match Omlet webhook expectations.
-- **Change**: Skip webhook token validation for compatibility with Omlet portal behavior.
-
----
-
-## 2025.12.20 – Webhooks + Cleanup
-
-- **Fix**: Webhook handler now responds immediately and refreshes in the background to prevent Omlet disabling webhooks on slow API calls.
-- **Fix**: Unified webhook token parsing across headers, query params, and JSON body.
-- **Improvement**: Service targets now support device/area/label selection in the UI; schemas no longer expose `device_id`.
-- **Improvement**: Entity names use `translation_key` with `translations/en.json` for consistent labels.
-- **Improvement**: Diagnostics data is available via `diagnostics.py`; runtime state attributes are reduced.
-
----
-
-## 2025.12.19 – Smart Fan Update
-
-- **New**: Full Smart Coop Fan support (mode, manual speed, time slots, thermostatic thresholds).
-- **Note**: Home Assistant **must be restarted** after updating the integration.
-
----
-
 ## Sponsor
 
 If you find this integration useful, consider supporting development:
 
 <a href="https://www.buymeacoffee.com/krozgrov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;"></a>
+
+---
+
+## 2026.01.03 – Device Registry Identifiers
+
+- **Fix**: Include both deviceId and serial in device identifiers when available.
+- **Fix**: Remove placeholder hardware version values from device registry entries.
 
 ---
 
