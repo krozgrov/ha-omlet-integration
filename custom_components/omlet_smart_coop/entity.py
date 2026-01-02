@@ -29,20 +29,23 @@ class OmletEntity(CoordinatorEntity):
         data = self._device_data
         state = data.get("state", {}).get("general", {})
         serial = data.get("deviceSerial")
-        identifier_value = serial or data.get("deviceId") or self.device_id
+        device_id = data.get("deviceId") or self.device_id
+        identifier_value = serial or device_id
+        identifiers = {(DOMAIN, identifier_value)}
+        if serial and device_id:
+            identifiers.add((DOMAIN, device_id))
         # Determine a friendly device name
         device_name = data.get("name")
         if not device_name or str(device_name).strip() == "":
             tail = str(identifier_value)[-6:] if identifier_value else "device"
             device_name = f"Omlet Coop {tail}"
         return DeviceInfo(
-            identifiers={(DOMAIN, identifier_value)},
+            identifiers=identifiers,
             name=device_name,
             manufacturer="Omlet",
             model=data.get("deviceType"),
             model_id=data.get("deviceTypeId"),
             sw_version=state.get("firmwareVersionCurrent"),
-            hw_version=self.device_id,
             serial_number=serial,
         )
 
