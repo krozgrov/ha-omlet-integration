@@ -16,10 +16,9 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.01.03 – Device Registry Identifiers
+## 2026.01.04 – Translation Alignment
 
-- **Fix**: Include both deviceId and serial in device identifiers when available.
-- **Fix**: Remove placeholder hardware version values from device registry entries.
+- **Fix**: Restore runtime labels by syncing `translations/en.json` with `strings.json`.
 
 ---
 
