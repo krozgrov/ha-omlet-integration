@@ -18,3 +18,9 @@
 
 ## 2026-01-02: Entity metadata audit
 - Reviewed entity_category usage for config/diagnostic entities; no changes required beyond device_info identifiers update.
+
+## 2026-01-02: Translation base file alignment
+- Moved English base strings into strings.json and removed translations/en.json to align with HA core translation structure.
+
+## 2026-01-02: Translation runtime compatibility
+- Restored translations/en.json (mirrors strings.json) so HA 2025.12 renders entity labels correctly for custom integrations.
