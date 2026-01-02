@@ -60,6 +60,9 @@ Risks:
 - Translation key changes can affect UI labels.
 Tests:
 - hassfest translation validation; manual UI spot-check.
+Status: Completed (2026-01-02)
+Notes:
+- Moved English base strings to strings.json; removed translations/en.json to avoid duplication.
 
 5) Core integration packaging prep
 Goal: Prepare for upstreaming to home-assistant/core.
