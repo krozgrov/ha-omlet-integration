@@ -44,9 +44,11 @@ Risks:
 - Changing unique_id could orphan entities.
 Tests:
 - Registry fixture tests to confirm unique_id and device_info consistency.
-Status: In progress (2026-01-01)
+Status: Completed (2026-01-02)
 Notes:
 - Updated device_info identifiers to include deviceId alongside serial and removed hw_version placeholder.
+Validation:
+- Reviewed entity_category usage for config/diagnostic entities; no changes required.
 
 4) Translation and UX alignment for core
 Goal: Align strings/translations with core standards.

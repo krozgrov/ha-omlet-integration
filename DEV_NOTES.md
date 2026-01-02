@@ -12,3 +12,6 @@
 
 ## 2026-01-01: Device registry metadata adjustment
 - Use both deviceId and serial in device identifiers when available; avoid setting hw_version without a true hardware revision.
+
+## 2026-01-02: Entity metadata audit
+- Reviewed entity_category usage for config/diagnostic entities; no changes required beyond device_info identifiers update.
