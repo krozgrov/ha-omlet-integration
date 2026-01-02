@@ -216,7 +216,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
                     # Redacted logging: never log tokens; summarize event
                     try:
-                        evt = (payload or {}).get("payload") or {}
+                        evt = {}
+                        if isinstance(payload, dict):
+                            nested = payload.get("payload")
+                            if isinstance(nested, dict):
+                                evt = nested
+                            else:
+                                evt = payload
                         _LOGGER.debug(
                             "Webhook event: device=%s param=%s old=%s new=%s",
                             evt.get("deviceId"),
@@ -380,7 +386,13 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
                             return json_response(["invalid token"], status=401)
                     # Redacted logging: summarize event without secrets
                     try:
-                        evt = (payload or {}).get("payload") or {}
+                        evt = {}
+                        if isinstance(payload, dict):
+                            nested = payload.get("payload")
+                            if isinstance(nested, dict):
+                                evt = nested
+                            else:
+                                evt = payload
                         _LOGGER.debug(
                             "Webhook event: device=%s param=%s old=%s new=%s",
                             evt.get("deviceId"),

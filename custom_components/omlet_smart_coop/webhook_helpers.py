@@ -27,15 +27,27 @@ def get_expected_webhook_token(entry: ConfigEntry) -> str | None:
 
 def get_provided_webhook_token(request: Request, payload: dict[str, Any] | None) -> str | None:
     """Extract a webhook token from headers, payload, or query params."""
+    auth_header = request.headers.get("Authorization")
+    if auth_header:
+        auth_value = auth_header.strip()
+        if auth_value.lower().startswith("bearer "):
+            auth_value = auth_value.split(" ", 1)[1].strip()
+        if auth_value:
+            return auth_value
     for header in _TOKEN_HEADER_KEYS:
         val = request.headers.get(header)
         if val:
             return val
     if payload:
-        for key in ("token", "secret", "webhook_token", "webhookToken"):
-            val = payload.get(key)
-            if val:
-                return str(val)
+        payload_candidates = [payload]
+        nested_payload = payload.get("payload")
+        if isinstance(nested_payload, dict):
+            payload_candidates.append(nested_payload)
+        for candidate in payload_candidates:
+            for key in ("token", "secret", "webhook_token", "webhookToken"):
+                val = candidate.get(key)
+                if val:
+                    return str(val)
     for key in _TOKEN_QUERY_KEYS:
         val = request.query.get(key)
         if val:
