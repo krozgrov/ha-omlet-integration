@@ -9,3 +9,6 @@
 - Reintroduced webhook token validation only when a token is set, so default installs remain compatible with Omlet webhook delivery.
 ## 2026-01-01: Webhook validation verified
 - Manual webhook events confirmed delivery with token validation enabled.
+
+## 2026-01-01: Device registry metadata adjustment
+- Use both deviceId and serial in device identifiers when available; avoid setting hw_version without a true hardware revision.
