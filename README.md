@@ -8,6 +8,13 @@ An integration for Home Assistant that connects your Omlet Smart Coop devices—
 
 ---
 
+## 2026.01.02 – Webhook Token Compatibility
+
+- **Fix**: Accept Authorization (Bearer) tokens for webhook validation.
+- **Fix**: Handle flat Omlet webhook payloads while keeping nested payload support.
+
+---
+
 ## 2026.01.01 – Webhook Security Alignment
 
 - **Fix**: Enforce webhook token validation only when a token is configured.
