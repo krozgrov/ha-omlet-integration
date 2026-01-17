@@ -24,3 +24,9 @@
 
 ## 2026-01-02: Translation runtime compatibility
 - Restored translations/en.json (mirrors strings.json) so HA 2025.12 renders entity labels correctly for custom integrations.
+
+## 2026-01-17: Webhook token parsing resilience
+- Normalize webhook tokens and accept additional auth header schemes/keys to reduce false 401s that can disable Omlet webhooks.
+
+## 2026-01-17: Webhook response normalization
+- Return plain text `ok` for webhook responses to keep Omlet success logs consistent and avoid double-encoded JSON.

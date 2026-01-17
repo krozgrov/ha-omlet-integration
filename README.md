@@ -16,6 +16,11 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.01.17b1 – Webhook Response Normalization (Pre-release)
+
+- **Changed**: Webhook responses now return plain text `ok` for consistent Omlet delivery logs.
+- **Fixed**: Improved webhook token parsing to reduce false 401s.
+
 ## 2026.01.04 – Translation Alignment
 
 - **Fix**: Restore runtime labels by syncing `translations/en.json` with `strings.json`.

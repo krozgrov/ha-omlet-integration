@@ -12,16 +12,29 @@ _TOKEN_HEADER_KEYS = (
     "X-Webhook-Token",
     "X-Webhook-Secret",
     "X-Omlet-Secret",
+    "X-Omlet-Auth-Token",
+    "X-Omlet-Auth",
+    "X-Api-Key",
+    "X-Auth-Token",
 )
 _TOKEN_QUERY_KEYS = ("token", "secret", "webhook_token")
+_AUTH_SCHEMES = ("bearer", "token", "apikey", "api-key")
+
+
+def _normalize_token(value: Any) -> str | None:
+    """Normalize a token value by trimming whitespace and coercing to str."""
+    if value is None:
+        return None
+    token = str(value).strip()
+    return token or None
 
 
 def get_expected_webhook_token(entry: ConfigEntry) -> str | None:
     """Return the configured webhook token, if any."""
     for key in _TOKEN_OPTION_KEYS:
-        val = entry.options.get(key)
-        if val:
-            return str(val)
+        token = _normalize_token(entry.options.get(key))
+        if token:
+            return token
     return None
 
 
@@ -30,14 +43,17 @@ def get_provided_webhook_token(request: Request, payload: dict[str, Any] | None)
     auth_header = request.headers.get("Authorization")
     if auth_header:
         auth_value = auth_header.strip()
-        if auth_value.lower().startswith("bearer "):
-            auth_value = auth_value.split(" ", 1)[1].strip()
-        if auth_value:
-            return auth_value
+        if " " in auth_value:
+            scheme, value = auth_value.split(" ", 1)
+            if scheme.lower() in _AUTH_SCHEMES:
+                auth_value = value.strip()
+        token = _normalize_token(auth_value)
+        if token:
+            return token
     for header in _TOKEN_HEADER_KEYS:
-        val = request.headers.get(header)
-        if val:
-            return val
+        token = _normalize_token(request.headers.get(header))
+        if token:
+            return token
     if payload:
         payload_candidates = [payload]
         nested_payload = payload.get("payload")
@@ -45,11 +61,11 @@ def get_provided_webhook_token(request: Request, payload: dict[str, Any] | None)
             payload_candidates.append(nested_payload)
         for candidate in payload_candidates:
             for key in ("token", "secret", "webhook_token", "webhookToken"):
-                val = candidate.get(key)
-                if val:
-                    return str(val)
+                token = _normalize_token(candidate.get(key))
+                if token:
+                    return token
     for key in _TOKEN_QUERY_KEYS:
-        val = request.query.get(key)
-        if val:
-            return val
+        token = _normalize_token(request.query.get(key))
+        if token:
+            return token
     return None
