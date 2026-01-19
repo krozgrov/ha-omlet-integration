@@ -723,7 +723,7 @@ To support HACS testing and deployment, every pre‑release must:
 
 * Be tagged in GitHub using the required format `YYYY.MM.DDbN`
 * Be published as a **GitHub pre‑release**
-* Be created from the **current active development branch**
+* Be created from the **current active development branch** (the relevant SDLC branch, e.g., `fix/...`, `feat/...`)
 * Represent the actual commit intended for validation
 
 Sequence numbering must:
@@ -743,9 +743,17 @@ Stable releases must use the matching format without the beta suffix:
 
 For non-stable work (experimental, development, or testing):
 
-* Use dedicated **SDLC branches** (e.g., `dev`, `test`, `experimental`)
+* Use dedicated **SDLC branches** (e.g., `fix/...`, `feat/...`, `chore/...`, `test/...`, `release/...`, `experimental/...`)
 * Publish those branches to HACS **only as pre-releases**
 * Never merge SDLC branches directly into stable without review
+
+21.3A Branch Naming & Lifecycle (SDLC Best Practices)
+
+* Use short‑lived, purpose‑named branches (examples: `fix/device-payload-guarding`, `feat/fan-schedule-ui`)
+* Prefer one logical change per branch; split unrelated work
+* Cut **pre‑releases** from the SDLC branch for that change
+* Merge to `main` only after review; cut **stable** releases from `main`
+* Delete SDLC branches after merge/release to keep the branch list clean
 
 ---
 
