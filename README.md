@@ -16,9 +16,11 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.01.18b1 – Device Payload Guarding (Pre-release)
+## 2026.01.18 – Stability Fixes
 
 - **Fixed**: Guard against malformed device payloads (non-dict state/config/actions) to avoid coordinator update crashes.
+- **Fixed**: Webhook responses now return plain text `ok` for consistent Omlet delivery logs.
+- **Fixed**: Webhook token parsing accepts additional auth header schemes/keys to reduce false 401s.
 
 ## 2026.01.17b1 – Webhook Response Normalization (Pre-release)
 
