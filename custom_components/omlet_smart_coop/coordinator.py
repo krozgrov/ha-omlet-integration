@@ -173,8 +173,31 @@ class OmletDataCoordinator(DataUpdateCoordinator):
     def _parse_device(self, device: Dict[str, Any]) -> Dict[str, Any]:
         """Parse device data into standard format."""
         state = device.get("state", {})
+        if not isinstance(state, dict):
+            _LOGGER.warning(
+                "Device %s returned non-dict state (%s); using empty state",
+                device.get("deviceId", "Unknown"),
+                type(state).__name__,
+            )
+            state = {}
         general_state = state.get("general", {})
         firmware = general_state.get("firmwareVersionCurrent", "Unknown")
+        config = device.get("configuration", {})
+        if not isinstance(config, dict):
+            _LOGGER.warning(
+                "Device %s returned non-dict configuration (%s); using empty configuration",
+                device.get("deviceId", "Unknown"),
+                type(config).__name__,
+            )
+            config = {}
+        actions = device.get("actions", [])
+        if not isinstance(actions, list):
+            _LOGGER.warning(
+                "Device %s returned non-list actions (%s); using empty actions",
+                device.get("deviceId", "Unknown"),
+                type(actions).__name__,
+            )
+            actions = []
 
         parsed_device = {
             "deviceId": device.get("deviceId"),
@@ -182,11 +205,9 @@ class OmletDataCoordinator(DataUpdateCoordinator):
             "firmware": firmware,
             "name": device.get("name", "Unknown"),
             "deviceType": device.get("deviceType", "Unknown Model"),
-            "state": self._parse_device_state(device.get("state", {})),
-            "configuration": self._parse_device_configuration(
-                device.get("configuration", {})
-            ),
-            "actions": self._parse_device_actions(device.get("actions", [])),
+            "state": self._parse_device_state(state),
+            "configuration": self._parse_device_configuration(config),
+            "actions": self._parse_device_actions(actions),
         }
 
         _LOGGER.debug("Parsed device data: %s", parsed_device)
@@ -194,6 +215,8 @@ class OmletDataCoordinator(DataUpdateCoordinator):
 
     def _parse_device_state(self, state: Dict[str, Any]) -> Dict[str, Any]:
         """Parse device state data."""
+        if not isinstance(state, dict):
+            return {}
         parser = DataParser()
         general_fields = [
             "firmwareVersionCurrent",
@@ -229,11 +252,15 @@ class OmletDataCoordinator(DataUpdateCoordinator):
 
     def _parse_device_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Parse device configuration data."""
+        if not isinstance(config, dict):
+            return {}
         config_fields = ["light", "door", "fan", "connectivity", "general"]
         return {key: config.get(key, {}) for key in config_fields}
 
     def _parse_device_actions(self, actions: list) -> list:
         """Parse device actions."""
+        if not isinstance(actions, list):
+            return []
         return [
             action
             for action in actions

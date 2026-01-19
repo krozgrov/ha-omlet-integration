@@ -30,3 +30,6 @@
 
 ## 2026-01-17: Webhook response normalization
 - Return plain text `ok` for webhook responses to keep Omlet success logs consistent and avoid double-encoded JSON.
+
+## 2026-01-18: Resilient device parsing
+- Guard device state/config/actions parsing against unexpected non-dict/list payloads to avoid coordinator crashes.
