@@ -773,6 +773,11 @@ The title should:
 * Clearly signal testing intent
 * Highlight the primary change or risk area
 
+21.4A Release Notes Formatting (Required)
+
+* Release notes must render with real line breaks (no literal `\\n` in the published body).
+* When using `gh release` CLI, use `$'...'` or `--notes-file` to ensure actual newlines.
+
 ---
 
 ### 21.5 Promotion to Stable
