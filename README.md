@@ -22,6 +22,10 @@ If you find this integration useful, consider supporting development:
 - **Fixed**: Webhook responses now return plain text `ok` for consistent Omlet delivery logs.
 - **Fixed**: Webhook token parsing accepts additional auth header schemes/keys to reduce false 401s.
 
+## 2026.01.20b1 – Service Target Mapping (Pre-release)
+
+- **Fixed**: Map service device targets using both device serial and deviceId identifiers.
+
 ## 2026.01.17b1 – Webhook Response Normalization (Pre-release)
 
 - **Changed**: Webhook responses now return plain text `ok` for consistent Omlet delivery logs.

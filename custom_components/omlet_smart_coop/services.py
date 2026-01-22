@@ -145,9 +145,13 @@ async def get_integration_device_ids(
     if not isinstance(device_ids, list):
         device_ids = [device_ids] if device_ids else []
 
-    # Resolve entity_ids from targets (supports device/area/label selection)
+    # Resolve entity_ids from targets (supports device/area/label selection).
+    # HA 2026.10 removes the hass argument; keep compatibility with older cores.
     try:
-        resolved = async_extract_entity_ids(hass, call)
+        try:
+            resolved = async_extract_entity_ids(call)
+        except TypeError:
+            resolved = async_extract_entity_ids(hass, call)
         if inspect.isawaitable(resolved):
             resolved = await resolved
         entity_ids = list(resolved)
@@ -165,22 +169,21 @@ async def get_integration_device_ids(
     for device_id in device_ids:
         ha_device = device_registry.async_get(device_id)
         if ha_device:
-            serial_number = next(
-                (entry[1] for entry in ha_device.identifiers if entry[0] == DOMAIN),
-                None,
-            )
-            _LOGGER.debug("Found device serial number: %s", serial_number)
+            identifiers = [value for domain, value in ha_device.identifiers if domain == DOMAIN]
+            _LOGGER.debug("Found Omlet identifiers: %s", identifiers)
 
-            # Look up the device ID using the serial number
-            for dev_id, dev_data in coordinator.devices.items():
-                if dev_data.get("deviceSerial") == serial_number:
-                    integration_device_ids.append(dev_id)  # Changed to append
-                    _LOGGER.debug(
-                        "Mapped serial %s to device ID: %s",
-                        serial_number,
-                        dev_id,
-                    )
-                    break
+            # Look up the device ID using serial or deviceId identifiers
+            for identifier in identifiers:
+                for dev_id, dev_data in coordinator.devices.items():
+                    if dev_data.get("deviceSerial") == identifier or dev_data.get("deviceId") == identifier:
+                        if dev_id not in integration_device_ids:
+                            integration_device_ids.append(dev_id)
+                            _LOGGER.debug(
+                                "Mapped identifier %s to device ID: %s",
+                                identifier,
+                                dev_id,
+                            )
+                        break
 
     # If no IDs found yet, try entity_id(s)
     if not integration_device_ids and entity_ids:
@@ -191,14 +194,15 @@ async def get_integration_device_ids(
                 if ent_entry and ent_entry.device_id:
                     ha_device = device_registry.async_get(ent_entry.device_id)
                     if ha_device:
-                        serial_number = next(
-                            (entry[1] for entry in ha_device.identifiers if entry[0] == DOMAIN),
-                            None,
-                        )
-                        for dev_id, dev_data in coordinator.devices.items():
-                            if dev_data.get("deviceSerial") == serial_number:
-                                integration_device_ids.append(dev_id)
-                                break
+                        identifiers = [
+                            value for domain, value in ha_device.identifiers if domain == DOMAIN
+                        ]
+                        for identifier in identifiers:
+                            for dev_id, dev_data in coordinator.devices.items():
+                                if dev_data.get("deviceSerial") == identifier or dev_data.get("deviceId") == identifier:
+                                    if dev_id not in integration_device_ids:
+                                        integration_device_ids.append(dev_id)
+                                    break
             except Exception as e:
                 _LOGGER.debug("Failed entity_id resolution via registry for %s: %s", ent_id, e)
 

@@ -33,3 +33,9 @@
 
 ## 2026-01-18: Resilient device parsing
 - Guard device state/config/actions parsing against unexpected non-dict/list payloads to avoid coordinator crashes.
+
+## 2026-01-20: HA service target compatibility
+- Use the new `async_extract_entity_ids(call)` signature with a fallback for older cores to avoid deprecation warnings.
+
+## 2026-01-20: Service target mapping resilience
+- Match HA device identifiers against both device serial and deviceId to avoid service target lookup failures.
