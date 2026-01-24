@@ -564,6 +564,7 @@ AI agents must:
 * Explicitly state whether a change requires a version bump
 * Call out user-visible changes clearly
 * Identify entity-affecting changes (new, removed, renamed, or modified entities)
+* Keep README release notes in descending date order; remove pre-release notes once a stable release is cut
 
 When applicable, AI agents should draft a **changelog entry** that includes:
 
