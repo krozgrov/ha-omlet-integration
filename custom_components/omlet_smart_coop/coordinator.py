@@ -198,6 +198,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
                 type(actions).__name__,
             )
             actions = []
+        actions = self._ensure_restart_action(device.get("deviceId"), actions)
 
         parsed_device = {
             "deviceId": device.get("deviceId"),
@@ -279,6 +280,23 @@ class OmletDataCoordinator(DataUpdateCoordinator):
             for action in actions
             if all(field in action for field in self.validation.required_action_fields)
         ]
+
+    def _ensure_restart_action(self, device_id: str | None, actions: list) -> list:
+        """Ensure a restart action is present for the device."""
+        if not device_id or not isinstance(actions, list):
+            return actions if isinstance(actions, list) else []
+        for action in actions:
+            if (action.get("actionValue") or "").lower() == "restart":
+                return actions
+        restart_action = {
+            "actionName": "restart",
+            "description": "Restart",
+            "actionValue": "restart",
+            "pendingValue": None,
+            "callback": None,
+            "url": f"/device/{device_id}/action/restart",
+        }
+        return [*actions, restart_action]
 
     async def async_shutdown(self) -> None:
         """Shut down the coordinator."""

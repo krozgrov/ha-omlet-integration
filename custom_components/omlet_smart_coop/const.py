@@ -27,6 +27,7 @@ MAX_POLLING_INTERVAL = 86400  # Maximum allowed polling interval in seconds
 # Service constants
 SERVICE_OPEN_DOOR = "open_door"
 SERVICE_CLOSE_DOOR = "close_door"
+SERVICE_RESTART_DEVICE = "restart_device"
 SERVICE_UPDATE_OVERNIGHT_SLEEP = "update_overnight_sleep"
 SERVICE_UPDATE_DOOR_SCHEDULE = "update_door_schedule"
 SERVICE_SHOW_WEBHOOK_URL = "show_webhook_url"

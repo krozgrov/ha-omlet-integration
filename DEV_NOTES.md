@@ -40,11 +40,17 @@
 ## 2026-01-20: Service target mapping resilience
 - Match HA device identifiers against both device serial and deviceId to avoid service target lookup failures.
 
+## 2026-01-27: Restart action exposure
+- Surface a `restart` action for each device and add a restart service so users can reboot devices directly from HA.
+
 ## 2026-01-28: Smart feeder support
 - Added feeder state/config parsing and a dedicated feeder cover + sensors to support the Smart No Waste Chicken Feeder.
+
 ## 2026-01-28: Feeder entity reload guard
 - Skip adding feeder entities if they already exist and are still loaded to avoid duplicate suffixes on reload.
+
 ## 2026-01-28: Entity reload guard across platforms
 - Apply the same unique_id-loaded guard to all entity platforms for consistency and future device types.
+
 ## 2026-01-28: Reload guard StateMachine fix
 - Use hass.states.get(...) for StateMachine membership checks to avoid setup errors.

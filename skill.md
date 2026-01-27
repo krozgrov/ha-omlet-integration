@@ -75,7 +75,21 @@ Risks:
 Tests:
 - hassfest and ruff; minimal integration tests in core layout.
 
-6) Smart feeder device support
+6) Device restart action exposure
+Goal: Expose a restart action per Omlet device for HA users.
+Outline:
+- Inject a `restart` action into each device action list when missing.
+- Add a `restart_device` service targeting Omlet devices with action endpoint fallback.
+- Document the new service in README.
+Risks:
+- Some device models may not support restart; service should fail gracefully.
+Tests:
+- Manual service call on a device and verify action list contains `restart`.
+Status: Implemented (2026-01-27)
+Validation:
+- Pending manual verification in HA.
+
+7) Smart feeder device support
 Goal: Add support for Omlet Smart No Waste Chicken Feeder devices (deviceType "Feeder").
 Outline:
 - Parse feeder state/config fields and surface them as entities.
@@ -91,7 +105,7 @@ Status: Implemented (2026-01-28)
 Validation:
 - Pending manual verification in HA.
 
-7) Entity reload guard across platforms
+8) Entity reload guard across platforms
 Goal: Prevent duplicate entities on integration reload for all platforms.
 Outline:
 - Add a shared helper to skip entity creation when a unique_id is already loaded.

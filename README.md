@@ -16,10 +16,12 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.01.28b4 – Smart Feeder Support
+## 2026.01.28b5 – Feeder + Restart + Reload Guard
 
 - **Added**: Feeder cover entity for open/close actions.
 - **Added**: Feeder sensors for feed level, state, fault, light level, mode, and last open/close timestamps.
+- **Added**: `restart_device` service to reboot Omlet devices via the action endpoint.
+- **Changed**: Surface a `restart` entry in each device’s actions list when missing.
 - **Fixed**: Prevent duplicate entities after integration reloads (all platforms).
 - **Fixed**: Reload guard now checks HA StateMachine correctly (fixes platform setup errors).
 - **Changed**: Feeder state icon aligned with door-style icon.
@@ -126,25 +128,24 @@ The Smart No Waste Chicken Feeder exposes:
 
 ---
 
-## Install via HACS (Recommended)
+## HACS Installation
 
-1. Open **HACS → Integrations**
-2. Search for **Omlet Smart Coop**
-3. Install and restart Home Assistant
-
-If it doesn’t appear in search:
-
-1. Add a custom repository  
-   URL: `https://github.com/krozgrov/ha-omlet-integration`  
-   Type: Integration  
-2. Install and restart
+1. Open **HACS** → **Integrations**.
+2. Click the menu (⋮) → **Custom repositories**.
+3. Add:  
+   `https://github.com/krozgrov/ha-omlet-integration`  
+   Category: **Integration**
+4. Search for **Omlet Smart Coop** and install.
+5. Restart Home Assistant.
 
 ---
 
 # **Configuration**
 
-1. Home Assistant → **Settings → Devices & Services → Add Integration**
-2. Search for **Omlet Integration**
+## Setup
+
+1. Go to **Settings → Devices & Services → Add Integration**
+2. Search for **Omlet Smart Coop**
 3. Enter your API key and polling interval
 
 ### Configuration Screenshots
@@ -201,3 +202,4 @@ logger:
   default: warning
   logs:
     custom_components.omlet_smart_coop: debug
+```
