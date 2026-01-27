@@ -74,3 +74,17 @@ Risks:
 - Core submission will require additional code review changes.
 Tests:
 - hassfest and ruff; minimal integration tests in core layout.
+
+6) Device restart action exposure
+Goal: Expose a restart action per Omlet device for HA users.
+Outline:
+- Inject a `restart` action into each device action list when missing.
+- Add a `restart_device` service targeting Omlet devices with action endpoint fallback.
+- Document the new service in README.
+Risks:
+- Some device models may not support restart; service should fail gracefully.
+Tests:
+- Manual service call on a device and verify action list contains `restart`.
+Status: Implemented (2026-01-27)
+Validation:
+- Pending manual verification in HA.

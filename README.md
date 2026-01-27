@@ -16,6 +16,11 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.01.27b1 – Device Restart Action
+
+- **Added**: `restart_device` service to reboot Omlet devices via the action endpoint.
+- **Changed**: Surface a `restart` entry in each device’s actions list when missing.
+
 ## 2026.01.20 – Service Target Mapping
 
 - **Fixed**: Map service device targets using both device serial and deviceId identifiers.

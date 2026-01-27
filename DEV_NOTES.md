@@ -39,3 +39,6 @@
 
 ## 2026-01-20: Service target mapping resilience
 - Match HA device identifiers against both device serial and deviceId to avoid service target lookup failures.
+
+## 2026-01-27: Restart action exposure
+- Surface a `restart` action for each device and add a restart service so users can reboot devices directly from HA.

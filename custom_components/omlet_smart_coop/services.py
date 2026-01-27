@@ -27,6 +27,7 @@ from .const import (
     DOMAIN,
     SERVICE_OPEN_DOOR,
     SERVICE_CLOSE_DOOR,
+    SERVICE_RESTART_DEVICE,
     SERVICE_UPDATE_OVERNIGHT_SLEEP,
     SERVICE_UPDATE_DOOR_SCHEDULE,
     SERVICE_SHOW_WEBHOOK_URL,
@@ -471,6 +472,45 @@ async def async_register_services(
         except Exception as err:
             _LOGGER.error("Failed to process close door command: %s", err)
 
+    async def handle_restart_device(call: ServiceCall) -> None:
+        """Handle the restart device service call."""
+        try:
+            targets = await _targets(call)
+            if not targets:
+                return
+
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        device_data = coord.data.get(device_id, {}) or {}
+                        actions = device_data.get("actions", []) or []
+                        action_url = next(
+                            (
+                                action.get("url")
+                                for action in actions
+                                if (action.get("actionValue") or "").lower() == "restart"
+                            ),
+                            None,
+                        )
+                        await coord.api_client.execute_action(
+                            action_url or f"device/{device_id}/action/restart"
+                        )
+                        _LOGGER.info(
+                            "Successfully restarted device: %s",
+                            coord.devices[device_id]["name"],
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to restart device %s: %s", device_id, err
+                        )
+
+                await coord.async_request_refresh()
+
+        except ClientError as err:
+            _LOGGER.error("API error while restarting device: %s", err)
+        except Exception as err:
+            _LOGGER.error("Failed to process restart device command: %s", err)
+
     async def _fan_action_and_refresh(
         coord: OmletDataCoordinator, device_id: str, action: str
     ) -> None:
@@ -852,6 +892,7 @@ async def async_register_services(
     # Register all services (idempotent)
     _register(SERVICE_OPEN_DOOR, handle_open_door)
     _register(SERVICE_CLOSE_DOOR, handle_close_door)
+    _register(SERVICE_RESTART_DEVICE, handle_restart_device)
     _register(SERVICE_UPDATE_OVERNIGHT_SLEEP, handle_update_overnight_sleep)
     _register(SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule)
     _register(SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
