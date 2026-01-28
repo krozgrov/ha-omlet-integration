@@ -16,11 +16,12 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.01.28b3 – Smart Feeder Support
+## 2026.01.28b4 – Smart Feeder Support
 
 - **Added**: Feeder cover entity for open/close actions.
 - **Added**: Feeder sensors for feed level, state, fault, light level, mode, and last open/close timestamps.
 - **Fixed**: Prevent duplicate entities after integration reloads (all platforms).
+- **Fixed**: Reload guard now checks HA StateMachine correctly (fixes platform setup errors).
 - **Changed**: Feeder state icon aligned with door-style icon.
 
 ## 2026.01.20 – Service Target Mapping

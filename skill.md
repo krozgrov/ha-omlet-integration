@@ -103,3 +103,5 @@ Tests:
 Status: Implemented (2026-01-28)
 Validation:
 - Pending manual verification in HA.
+Notes:
+- Follow-up fix: use hass.states.get(...) to avoid StateMachine membership errors on setup.

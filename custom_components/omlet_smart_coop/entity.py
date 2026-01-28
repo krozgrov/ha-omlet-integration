@@ -66,7 +66,7 @@ def should_add_entity(hass: HomeAssistant, entity_domain: str, unique_id: str) -
     """Return True if an entity with unique_id is not already loaded."""
     ent_reg = er.async_get(hass)
     existing = ent_reg.async_get_entity_id(entity_domain, DOMAIN, unique_id)
-    if existing and existing in hass.states:
+    if existing and hass.states.get(existing) is not None:
         _LOGGER.debug(
             "Skipping add for %s %s; entity already loaded as %s",
             entity_domain,

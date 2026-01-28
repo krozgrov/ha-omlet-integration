@@ -46,3 +46,5 @@
 - Skip adding feeder entities if they already exist and are still loaded to avoid duplicate suffixes on reload.
 ## 2026-01-28: Entity reload guard across platforms
 - Apply the same unique_id-loaded guard to all entity platforms for consistency and future device types.
+## 2026-01-28: Reload guard StateMachine fix
+- Use hass.states.get(...) for StateMachine membership checks to avoid setup errors.
