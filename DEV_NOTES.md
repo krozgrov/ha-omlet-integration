@@ -54,3 +54,6 @@
 
 ## 2026-01-28: Reload guard StateMachine fix
 - Use hass.states.get(...) for StateMachine membership checks to avoid setup errors.
+
+## 2026-01-28: Select registry import fix
+- Add missing entity registry imports for fan time speed selects to prevent setup NameError.

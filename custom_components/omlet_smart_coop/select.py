@@ -2,6 +2,8 @@ import logging
 from typing import Any
 
 from homeassistant.components.select import SelectEntity
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN

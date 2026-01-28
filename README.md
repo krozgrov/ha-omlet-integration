@@ -16,6 +16,10 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.01.28b6 – Select Registry Fix
+
+- **Fixed**: Fan time speed select entities now load (entity registry import error resolved).
+
 ## 2026.01.28b5 – Feeder + Restart + Reload Guard
 
 - **Added**: Feeder cover entity for open/close actions.
