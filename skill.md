@@ -90,3 +90,16 @@ Tests:
 Status: Implemented (2026-01-28)
 Validation:
 - Pending manual verification in HA.
+
+7) Entity reload guard across platforms
+Goal: Prevent duplicate entities on integration reload for all platforms.
+Outline:
+- Add a shared helper to skip entity creation when a unique_id is already loaded.
+- Apply to sensor, cover, light, fan, select, number, and time platforms.
+Risks:
+- Users must remove existing entities manually if they want to recreate them.
+Tests:
+- Reload integration twice and confirm no `_2/_3` entity duplicates appear.
+Status: Implemented (2026-01-28)
+Validation:
+- Pending manual verification in HA.

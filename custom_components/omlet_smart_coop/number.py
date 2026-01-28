@@ -7,7 +7,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import DOMAIN
-from .entity import OmletEntity
+from .entity import OmletEntity, should_add_entity
 from .fan_helpers import iter_fan_devices
 
 _LOGGER = logging.getLogger(__name__)
@@ -18,8 +18,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities: list[NumberEntity] = []
     for device_id, device_data in iter_fan_devices(coordinator):
         name = device_data.get("name") or device_id
-        entities.append(OmletFanTempOn(coordinator, device_id, name))
-        entities.append(OmletFanTempOff(coordinator, device_id, name))
+        if should_add_entity(hass, "number", f"{device_id}_tempOn"):
+            entities.append(OmletFanTempOn(coordinator, device_id, name))
+        if should_add_entity(hass, "number", f"{device_id}_tempOff"):
+            entities.append(OmletFanTempOff(coordinator, device_id, name))
 
     async_add_entities(entities)
 

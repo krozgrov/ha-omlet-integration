@@ -1,4 +1,6 @@
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers import entity_registry as er
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN
 import logging
@@ -58,3 +60,18 @@ class OmletEntity(CoordinatorEntity):
             "device_serial": data.get("deviceSerial"),
         }
         return {key: value for key, value in attributes.items() if value is not None}
+
+
+def should_add_entity(hass: HomeAssistant, entity_domain: str, unique_id: str) -> bool:
+    """Return True if an entity with unique_id is not already loaded."""
+    ent_reg = er.async_get(hass)
+    existing = ent_reg.async_get_entity_id(entity_domain, DOMAIN, unique_id)
+    if existing and existing in hass.states:
+        _LOGGER.debug(
+            "Skipping add for %s %s; entity already loaded as %s",
+            entity_domain,
+            unique_id,
+            existing,
+        )
+        return False
+    return True

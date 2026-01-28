@@ -8,10 +8,9 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfTime
 from homeassistant.helpers.entity import EntityCategory
-from homeassistant.helpers import entity_registry as er
+from .entity import OmletEntity, should_add_entity
 from homeassistant.helpers.typing import StateType
 from .const import DOMAIN
-from .entity import OmletEntity
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -237,7 +236,6 @@ def parse_timestamp(timestamp_str: str) -> datetime | None:
 async def async_setup_entry(hass, config_entry, async_add_entities):
     """Set up the sensors from the config entry."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
-    ent_reg = er.async_get(hass)
 
     _LOGGER.debug("Setting up sensors for devices: %s", coordinator.data)
 
@@ -272,8 +270,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             value = extract_sensor_value(key, device_data)
             if value is not None:
                 unique_id = f"{device_id}_{description.key}"
-                existing = ent_reg.async_get_entity_id("sensor", DOMAIN, unique_id)
-                if existing and existing in hass.states:
+                if not should_add_entity(hass, "sensor", unique_id):
                     continue
                 sensors.append(
                     OmletSensor(

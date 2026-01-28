@@ -2,12 +2,10 @@ import logging
 from typing import Any
 
 from homeassistant.components.select import SelectEntity
-from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
-from .entity import OmletEntity
+from .entity import OmletEntity, should_add_entity
 from .fan_helpers import FAN_SPEED_MAP, iter_fan_devices, patch_fan_config_and_refresh
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,13 +22,20 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities: list[SelectEntity] = []
     for device_id, device_data in iter_fan_devices(coordinator):
         name = device_data.get("name") or device_id
-        entities.append(OmletFanModeSelect(coordinator, device_id, name))
-        entities.append(OmletFanManualSpeedSelect(coordinator, device_id, name))
-        entities.append(OmletFanTimeSpeed1Select(coordinator, device_id, name))
-        entities.append(OmletFanTimeSpeed2Select(coordinator, device_id, name))
-        entities.append(OmletFanTimeSpeed3Select(coordinator, device_id, name))
-        entities.append(OmletFanTimeSpeed4Select(coordinator, device_id, name))
-        entities.append(OmletFanThermostatSpeedSelect(coordinator, device_id, name))
+        if should_add_entity(hass, "select", f"{device_id}_fan_mode"):
+            entities.append(OmletFanModeSelect(coordinator, device_id, name))
+        if should_add_entity(hass, "select", f"{device_id}_fan_manual_speed"):
+            entities.append(OmletFanManualSpeedSelect(coordinator, device_id, name))
+        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_1"):
+            entities.append(OmletFanTimeSpeed1Select(coordinator, device_id, name))
+        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_2"):
+            entities.append(OmletFanTimeSpeed2Select(coordinator, device_id, name))
+        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_3"):
+            entities.append(OmletFanTimeSpeed3Select(coordinator, device_id, name))
+        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_4"):
+            entities.append(OmletFanTimeSpeed4Select(coordinator, device_id, name))
+        if should_add_entity(hass, "select", f"{device_id}_fan_thermostat_speed"):
+            entities.append(OmletFanThermostatSpeedSelect(coordinator, device_id, name))
 
     async_add_entities(entities)
 

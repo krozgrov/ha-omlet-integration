@@ -8,7 +8,7 @@ from homeassistant.helpers.entity_registry import async_get as async_get_entity_
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
-from .entity import OmletEntity
+from .entity import OmletEntity, should_add_entity
 from .fan_helpers import iter_fan_devices, parse_hhmm, format_hhmm
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,8 +20,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities: list[TimeEntity] = []
     for device_id, device_data in iter_fan_devices(coordinator):
         name = device_data.get("name") or device_id
-        entities.append(OmletFanTimeOn1(coordinator, device_id, name))
-        entities.append(OmletFanTimeOff1(coordinator, device_id, name))
+        if should_add_entity(hass, "time", f"{device_id}_timeOn1"):
+            entities.append(OmletFanTimeOn1(coordinator, device_id, name))
+        if should_add_entity(hass, "time", f"{device_id}_timeOff1"):
+            entities.append(OmletFanTimeOff1(coordinator, device_id, name))
         for cls in (
             OmletFanTimeOn2,
             OmletFanTimeOff2,
@@ -30,7 +32,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             OmletFanTimeOn4,
             OmletFanTimeOff4,
         ):
-            entities.append(cls(coordinator, device_id, name))
+            cfg_key = cls._CFG_KEY
+            if should_add_entity(hass, "time", f"{device_id}_{cfg_key}"):
+                entities.append(cls(coordinator, device_id, name))
 
     async_add_entities(entities)
 

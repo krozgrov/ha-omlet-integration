@@ -44,3 +44,5 @@
 - Added feeder state/config parsing and a dedicated feeder cover + sensors to support the Smart No Waste Chicken Feeder.
 ## 2026-01-28: Feeder entity reload guard
 - Skip adding feeder entities if they already exist and are still loaded to avoid duplicate suffixes on reload.
+## 2026-01-28: Entity reload guard across platforms
+- Apply the same unique_id-loaded guard to all entity platforms for consistency and future device types.

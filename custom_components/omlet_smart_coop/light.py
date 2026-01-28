@@ -3,7 +3,7 @@ from homeassistant.components.light import (
     LightEntity,
     ColorMode,
 )
-from .entity import OmletEntity
+from .entity import OmletEntity, should_add_entity
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,13 +20,15 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         # Light Entity
         light_state = device_data.get("state", {}).get("light")
         if light_state:
-            lights.append(
-                OmletLight(
-                    coordinator,
-                    device_id,
-                    device_data["name"],
+            unique_id = f"{device_id}_light"
+            if should_add_entity(hass, "light", unique_id):
+                lights.append(
+                    OmletLight(
+                        coordinator,
+                        device_id,
+                        device_data["name"],
+                    )
                 )
-            )
 
     async_add_entities(lights)
 

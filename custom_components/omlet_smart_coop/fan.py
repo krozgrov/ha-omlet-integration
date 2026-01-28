@@ -7,7 +7,7 @@ from homeassistant.components import persistent_notification as pn
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .entity import OmletEntity
+from .entity import OmletEntity, should_add_entity
 from .const import CONF_ENABLE_WEBHOOKS
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,7 +26,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         fan_cfg = device_data.get("configuration", {}).get("fan")
         if not fan_state and not fan_cfg:
             continue
-        fans.append(OmletFan(coordinator, device_id, device_data["name"]))
+        unique_id = f"{device_id}_fan"
+        if should_add_entity(hass, "fan", unique_id):
+            fans.append(OmletFan(coordinator, device_id, device_data["name"]))
 
     async_add_entities(fans)
 

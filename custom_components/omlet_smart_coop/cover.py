@@ -1,7 +1,6 @@
 from homeassistant.components.cover import CoverEntity
 from .const import DOMAIN
-from homeassistant.helpers import entity_registry as er
-from .entity import OmletEntity
+from .entity import OmletEntity, should_add_entity
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -16,7 +15,6 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         async_add_entities: Callback to register entities
     """
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
-    ent_reg = er.async_get(hass)
 
     _LOGGER.debug("Setting up covers for devices: %s", coordinator.data)
 
@@ -32,8 +30,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             )
             if has_door_actions:
                 door_unique_id = f"{device_id}_door"
-                existing = ent_reg.async_get_entity_id("cover", DOMAIN, door_unique_id)
-                if not (existing and existing in hass.states):
+                if should_add_entity(hass, "cover", door_unique_id):
                     covers.append(
                         OmletDoorCover(
                             coordinator,
@@ -51,8 +48,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
             )
             if has_feeder_actions:
                 feeder_unique_id = f"{device_id}_feeder"
-                existing = ent_reg.async_get_entity_id("cover", DOMAIN, feeder_unique_id)
-                if not (existing and existing in hass.states):
+                if should_add_entity(hass, "cover", feeder_unique_id):
                     covers.append(
                         OmletFeederCover(
                             coordinator,
