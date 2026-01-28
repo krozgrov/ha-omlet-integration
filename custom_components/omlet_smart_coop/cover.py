@@ -1,5 +1,6 @@
 from homeassistant.components.cover import CoverEntity
 from .const import DOMAIN
+from homeassistant.helpers import entity_registry as er
 from .entity import OmletEntity
 import logging
 
@@ -15,6 +16,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         async_add_entities: Callback to register entities
     """
     coordinator = hass.data[DOMAIN][config_entry.entry_id]["coordinator"]
+    ent_reg = er.async_get(hass)
 
     _LOGGER.debug("Setting up covers for devices: %s", coordinator.data)
 
@@ -29,13 +31,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 for action in device_data.get("actions", []) or []
             )
             if has_door_actions:
-                covers.append(
-                    OmletDoorCover(
-                        coordinator,
-                        device_id,
-                        device_data["name"],
+                door_unique_id = f"{device_id}_door"
+                existing = ent_reg.async_get_entity_id("cover", DOMAIN, door_unique_id)
+                if not (existing and existing in hass.states):
+                    covers.append(
+                        OmletDoorCover(
+                            coordinator,
+                            device_id,
+                            device_data["name"],
+                        )
                     )
-                )
 
         # Feeder Cover
         feeder_state = device_data.get("state", {}).get("feeder")
@@ -45,13 +50,16 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 for action in device_data.get("actions", []) or []
             )
             if has_feeder_actions:
-                covers.append(
-                    OmletFeederCover(
-                        coordinator,
-                        device_id,
-                        device_data["name"],
+                feeder_unique_id = f"{device_id}_feeder"
+                existing = ent_reg.async_get_entity_id("cover", DOMAIN, feeder_unique_id)
+                if not (existing and existing in hass.states):
+                    covers.append(
+                        OmletFeederCover(
+                            coordinator,
+                            device_id,
+                            device_data["name"],
+                        )
                     )
-                )
 
     async_add_entities(covers)
 

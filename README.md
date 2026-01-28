@@ -16,10 +16,12 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.01.28b1 – Smart Feeder Support
+## 2026.01.28b2 – Smart Feeder Support
 
 - **Added**: Feeder cover entity for open/close actions.
 - **Added**: Feeder sensors for feed level, state, fault, light level, mode, and last open/close timestamps.
+- **Fixed**: Prevent duplicate feeder entities after integration reloads.
+- **Changed**: Feeder state icon aligned with door-style icon.
 
 ## 2026.01.20 – Service Target Mapping
 

@@ -42,3 +42,5 @@
 
 ## 2026-01-28: Smart feeder support
 - Added feeder state/config parsing and a dedicated feeder cover + sensors to support the Smart No Waste Chicken Feeder.
+## 2026-01-28: Feeder entity reload guard
+- Skip adding feeder entities if they already exist and are still loaded to avoid duplicate suffixes on reload.
