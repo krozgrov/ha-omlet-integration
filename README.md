@@ -16,11 +16,7 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.01.28b6 – Select Registry Fix
-
-- **Fixed**: Fan time speed select entities now load (entity registry import error resolved).
-
-## 2026.01.28b5 – Feeder + Restart + Reload Guard
+## 2026.01.28 – Feeder + Restart + Reload Guard
 
 - **Added**: Feeder cover entity for open/close actions.
 - **Added**: Feeder sensors for feed level, state, fault, light level, mode, and last open/close timestamps.
@@ -28,6 +24,7 @@ If you find this integration useful, consider supporting development:
 - **Changed**: Surface a `restart` entry in each device’s actions list when missing.
 - **Fixed**: Prevent duplicate entities after integration reloads (all platforms).
 - **Fixed**: Reload guard now checks HA StateMachine correctly (fixes platform setup errors).
+- **Fixed**: Fan time speed select entities now load (entity registry import error resolved).
 - **Changed**: Feeder state icon aligned with door-style icon.
 
 ## 2026.01.20 – Service Target Mapping
