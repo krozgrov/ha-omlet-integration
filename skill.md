@@ -74,3 +74,19 @@ Risks:
 - Core submission will require additional code review changes.
 Tests:
 - hassfest and ruff; minimal integration tests in core layout.
+
+6) Smart feeder device support
+Goal: Add support for Omlet Smart No Waste Chicken Feeder devices (deviceType "Feeder").
+Outline:
+- Parse feeder state/config fields and surface them as entities.
+- Add a feeder cover entity for open/close actions using the action endpoint list.
+- Add feeder sensors for feed level, state, fault, light level, and last open/close timestamps.
+- Update translations and README for new device type.
+Risks:
+- State values for the feeder may differ from the coop door (opening/closing semantics).
+- Some actions (factory reset/firmware/setup wifi) are unsafe to expose directly.
+Tests:
+- Manual device setup with feeder JSON payload and open/close action.
+Status: Implemented (2026-01-28)
+Validation:
+- Pending manual verification in HA.

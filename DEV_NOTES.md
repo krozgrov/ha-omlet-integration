@@ -39,3 +39,6 @@
 
 ## 2026-01-20: Service target mapping resilience
 - Match HA device identifiers against both device serial and deviceId to avoid service target lookup failures.
+
+## 2026-01-28: Smart feeder support
+- Added feeder state/config parsing and a dedicated feeder cover + sensors to support the Smart No Waste Chicken Feeder.

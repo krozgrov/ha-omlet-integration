@@ -16,6 +16,11 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.01.28b1 – Smart Feeder Support
+
+- **Added**: Feeder cover entity for open/close actions.
+- **Added**: Feeder sensors for feed level, state, fault, light level, mode, and last open/close timestamps.
+
 ## 2026.01.20 – Service Target Mapping
 
 - **Fixed**: Map service device targets using both device serial and deviceId identifiers.
@@ -87,6 +92,16 @@ The Smart Coop Fan exposes granular configuration and automation entities:
 | ![](https://github.com/user-attachments/assets/152ffe4e-a795-4f4d-8a99-dc7d64fc0a55) | ![](https://github.com/user-attachments/assets/1cb0983b-49d4-4dc7-be35-e75613e7fee0) | ![](https://github.com/user-attachments/assets/0240aba4-f831-4cf1-a4cf-c2ba295200b7) |
 
 **Note:** This fan is designed to **ventilate** (air movement), not cool like an A/C.
+
+---
+
+# **Smart Feeder Features**
+
+The Smart No Waste Chicken Feeder exposes:
+
+- Open/close control (cover entity)
+- Feed level, light level, fault/state, and mode sensors
+- Last open/close timestamps
 
 ---
 

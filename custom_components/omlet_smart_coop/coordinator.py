@@ -228,6 +228,15 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         door_fields = ["state", "lastOpenTime", "lastCloseTime", "fault", "lightLevel"]
         light_fields = ["state"]
         fan_fields = ["state", "temperature", "humidity"]
+        feeder_fields = [
+            "state",
+            "lastOpenTime",
+            "lastCloseTime",
+            "fault",
+            "feedLevel",
+            "lightLevel",
+            "mode",
+        ]
 
         parsed_state = {
             "general": parser.extract_fields(state.get("general", {}), general_fields),
@@ -248,13 +257,17 @@ class OmletDataCoordinator(DataUpdateCoordinator):
         if fan_state:
             parsed_state["fan"] = fan_state
 
+        feeder_state = parser.extract_fields(state.get("feeder", {}), feeder_fields)
+        if feeder_state:
+            parsed_state["feeder"] = feeder_state
+
         return parsed_state
 
     def _parse_device_configuration(self, config: Dict[str, Any]) -> Dict[str, Any]:
         """Parse device configuration data."""
         if not isinstance(config, dict):
             return {}
-        config_fields = ["light", "door", "fan", "connectivity", "general"]
+        config_fields = ["light", "door", "fan", "feeder", "connectivity", "general"]
         return {key: config.get(key, {}) for key in config_fields}
 
     def _parse_device_actions(self, actions: list) -> list:

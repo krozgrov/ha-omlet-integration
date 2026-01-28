@@ -54,6 +54,9 @@
     "cover": {
       "door": {
         "name": "Door"
+      },
+      "feeder": {
+        "name": "Feeder"
       }
     },
     "fan": {
@@ -155,6 +158,21 @@
       "door_close_mode": {
         "name": "Door Close Mode"
       },
+      "feeder_state": {
+        "name": "Feeder State"
+      },
+      "feeder_fault": {
+        "name": "Feeder Fault"
+      },
+      "feeder_feed_level": {
+        "name": "Feed Level"
+      },
+      "feeder_light_level": {
+        "name": "Feeder Light Level"
+      },
+      "feeder_mode": {
+        "name": "Feeder Mode"
+      },
       "light_state": {
         "name": "Light State"
       },
@@ -175,6 +193,12 @@
       },
       "last_close_time": {
         "name": "Last Close Time"
+      },
+      "feeder_last_open_time": {
+        "name": "Feeder Last Open Time"
+      },
+      "feeder_last_close_time": {
+        "name": "Feeder Last Close Time"
       },
       "door_open_time": {
         "name": "Door Open Time"

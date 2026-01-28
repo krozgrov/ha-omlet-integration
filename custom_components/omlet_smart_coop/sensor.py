@@ -124,6 +124,30 @@ SENSOR_TYPES = {
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:door",
     ),
+    # Feeder Sensors
+    "feeder_state": SensorEntityDescription(
+        key="feeder_state",
+        icon="mdi:food",
+    ),
+    "feeder_fault": SensorEntityDescription(
+        key="feeder_fault",
+        icon="mdi:alert-circle",
+    ),
+    "feeder_feed_level": SensorEntityDescription(
+        key="feeder_feed_level",
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:grain",
+    ),
+    "feeder_light_level": SensorEntityDescription(
+        key="feeder_light_level",
+        native_unit_of_measurement=PERCENTAGE,
+        icon="mdi:brightness-6",
+    ),
+    "feeder_mode": SensorEntityDescription(
+        key="feeder_mode",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:cog",
+    ),
     # Light Sensors
     "light_state": SensorEntityDescription(
         key="light_state",
@@ -162,6 +186,18 @@ SENSOR_TYPES = {
         device_class=SensorDeviceClass.TIMESTAMP,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:door-closed",
+    ),
+    "feeder_last_open_time": SensorEntityDescription(
+        key="feeder_last_open_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:food",
+    ),
+    "feeder_last_close_time": SensorEntityDescription(
+        key="feeder_last_close_time",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:food",
     ),
     # Configuration Sensors
     "door_open_time": SensorEntityDescription(
@@ -287,6 +323,16 @@ def extract_sensor_value(sensor_key, device_data):
         return config.get("door", {}).get("openMode")
     if sensor_key == "door_close_mode":
         return config.get("door", {}).get("closeMode")
+    if sensor_key == "feeder_state":
+        return state.get("feeder", {}).get("state")
+    if sensor_key == "feeder_fault":
+        return state.get("feeder", {}).get("fault")
+    if sensor_key == "feeder_feed_level":
+        return state.get("feeder", {}).get("feedLevel")
+    if sensor_key == "feeder_light_level":
+        return state.get("feeder", {}).get("lightLevel")
+    if sensor_key == "feeder_mode":
+        return state.get("feeder", {}).get("mode") or config.get("feeder", {}).get("mode")
     if sensor_key == "light_state":
         return state.get("light", {}).get("state")
     if sensor_key == "light_mode":
@@ -324,6 +370,12 @@ def extract_sensor_value(sensor_key, device_data):
         return parse_timestamp(timestamp_str)
     if sensor_key == "last_close_time":
         timestamp_str = state.get("door", {}).get("lastCloseTime")
+        return parse_timestamp(timestamp_str)
+    if sensor_key == "feeder_last_open_time":
+        timestamp_str = state.get("feeder", {}).get("lastOpenTime")
+        return parse_timestamp(timestamp_str)
+    if sensor_key == "feeder_last_close_time":
+        timestamp_str = state.get("feeder", {}).get("lastCloseTime")
         return parse_timestamp(timestamp_str)
 
     # Handle door configuration times
