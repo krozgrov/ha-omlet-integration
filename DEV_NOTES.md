@@ -57,3 +57,6 @@
 
 ## 2026-01-28: Select registry import fix
 - Add missing entity registry imports for fan time speed selects to prevent setup NameError.
+
+## 2026-01-28: services.yaml hassfest fix
+- Use a device selector field for restart_device instead of a target device filter to satisfy hassfest validation.
