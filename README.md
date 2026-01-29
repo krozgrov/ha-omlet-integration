@@ -4,7 +4,7 @@
 
 # Omlet Smart Chicken Coop Integration for Home Assistant
 
-An integration for Home Assistant that connects your Omlet Smart Coop devices—including the Smart Automatic Chicken Coop Door and Smart Coop Fan—enabling monitoring and control directly from Home Assistant using the official Omlet API.
+An integration for Home Assistant that connects your Omlet Smart Coop devices—including the Smart Automatic Chicken Coop Door, Smart Coop Fan, and Smart No Waste Chicken Feeder—enabling monitoring and control directly from Home Assistant using the official Omlet API.
 
 ---
 
