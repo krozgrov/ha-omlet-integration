@@ -16,6 +16,10 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.01.29 – Hassfest Services Fix
+
+- **Fixed**: `restart_device` service now uses a device selector field (hassfest compliant).
+
 ## 2026.01.28 – Feeder + Restart + Reload Guard
 
 - **Added**: Feeder cover entity for open/close actions.
