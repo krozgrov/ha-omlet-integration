@@ -30,35 +30,6 @@ If you find this integration useful, consider supporting development:
 - **Changed**: Entity identity now uses device serial when available, while API actions continue using the current Omlet `deviceId`.
 - **Changed**: Entity-affecting migration now automatically disables stale duplicates and restores canonical entities where possible.
 
-## 2026.01.29 – Hassfest Services Fix
-
-- **Fixed**: `restart_device` service now uses a device selector field (hassfest compliant).
-
-## 2026.01.28 – Feeder + Restart + Reload Guard
-
-- **Added**: Feeder cover entity for open/close actions.
-- **Added**: Feeder sensors for feed level, state, fault, light level, mode, and last open/close timestamps.
-- **Added**: `restart_device` service to reboot Omlet devices via the action endpoint.
-- **Changed**: Surface a `restart` entry in each device’s actions list when missing.
-- **Fixed**: Prevent duplicate entities after integration reloads (all platforms).
-- **Fixed**: Reload guard now checks HA StateMachine correctly (fixes platform setup errors).
-- **Fixed**: Fan time speed select entities now load (entity registry import error resolved).
-- **Changed**: Feeder state icon aligned with door-style icon.
-
-## 2026.01.20 – Service Target Mapping
-
-- **Fixed**: Map service device targets using both device serial and deviceId identifiers.
-
-## 2026.01.18 – Stability Fixes
-
-- **Fixed**: Guard against malformed device payloads (non-dict state/config/actions) to avoid coordinator update crashes.
-- **Fixed**: Webhook responses now return plain text `ok` for consistent Omlet delivery logs.
-- **Fixed**: Webhook token parsing accepts additional auth header schemes/keys to reduce false 401s.
-
-## 2026.01.04 – Translation Alignment
-
-- **Fix**: Restore runtime labels by syncing `translations/en.json` with `strings.json`.
-
 ---
 
 # **Smart Door Features**
