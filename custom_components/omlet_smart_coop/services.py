@@ -6,23 +6,24 @@ import logging
 import inspect
 from typing import Any
 from aiohttp import ClientError
-from aiohttp.web import Response
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import UnitOfTemperature
 from homeassistant.components import persistent_notification as pn
-from homeassistant.components import webhook as hass_webhook
-import secrets
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.network import get_url
 from homeassistant.helpers.service import async_extract_entity_ids
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .coordinator import OmletDataCoordinator
 from .fan_helpers import FAN_SPEED_MAP, schedule_followup_refresh
-from .webhook_helpers import get_expected_webhook_token, get_provided_webhook_token
+from .webhook_helpers import (
+    build_webhook_url_info,
+    format_webhook_url_message,
+    register_omlet_webhook,
+    rotate_omlet_webhook_id,
+)
 from .const import (
     DOMAIN,
     SERVICE_OPEN_DOOR,
@@ -307,20 +308,8 @@ async def async_register_services(
             enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
             webhook_id = entry.data.get(CONF_WEBHOOK_ID)
             if enabled and webhook_id:
-                try:
-                    url = hass_webhook.async_generate_url(hass, webhook_id)
-                except Exception as gen_err:
-                    try:
-                        base = get_url(hass)
-                        url = f"{base}/api/webhook/{webhook_id}"
-                    except Exception as url_err:
-                        url = f"/api/webhook/{webhook_id}"
-                        _LOGGER.debug(
-                            "Falling back to path-only webhook URL in service. generate_url=%r, get_url=%r",
-                            gen_err,
-                            url_err,
-                        )
-                msg = f"Webhook enabled. URL: {url}"
+                url_info = build_webhook_url_info(hass, webhook_id)
+                msg = format_webhook_url_message("Webhook enabled. URL:", url_info)
             elif enabled and not webhook_id:
                 msg = "Webhooks enabled but no webhook_id yet. Toggle webhooks off/on in Options to generate one."
             else:
@@ -344,59 +333,38 @@ async def async_register_services(
             entry = entries[0]
 
             enabled = entry.options.get(CONF_ENABLE_WEBHOOKS, False)
-            old_id = entry.data.get(CONF_WEBHOOK_ID)
+            new_id = rotate_omlet_webhook_id(hass, entry)
 
-            # Unregister old id if present
-            if old_id:
-                try:
-                    hass_webhook.async_unregister(hass, old_id)
-                except Exception:
-                    pass
-
-            # Generate a shorter, random hex ID (32 chars)
-            new_id = secrets.token_hex(16)
-            hass.config_entries.async_update_entry(
-                entry, data={**entry.data, CONF_WEBHOOK_ID: new_id}
-            )
-
-            url = f"/api/webhook/{new_id}"
             if enabled:
-                # Register new webhook handler (simple refresh-only handler)
-                async def _handle_webhook(hass, webhook_id_recv, request):
-                    payload = None
-                    try:
-                        try:
-                            payload = await request.json()
-                        except Exception:
-                            pass
-                        expected = get_expected_webhook_token(entry)
-                        provided = get_provided_webhook_token(request, payload)
-                        if expected and (not provided or provided != expected):
-                            return Response(status=401, text="invalid token")
-                    except Exception:
-                        return Response(status=200, text="ok")
-                    try:
-                        hass.async_create_task(
-                            hass.data[DOMAIN][entry.entry_id]["coordinator"].async_request_refresh()
-                        )
-                    except Exception:
-                        pass
-                    return Response(text="ok")
-
-                hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", new_id, _handle_webhook)
-                try:
-                    url = hass_webhook.async_generate_url(hass, new_id)
-                except Exception:
-                    try:
-                        base = get_url(hass)
-                        url = f"{base}/api/webhook/{new_id}"
-                    except Exception:
-                        url = f"/api/webhook/{new_id}"
+                entry_bucket = hass.data.get(DOMAIN, {}).get(entry.entry_id, {}) or {}
+                active_coordinator = entry_bucket.get("coordinator")
+                if active_coordinator is None:
+                    _LOGGER.error(
+                        "Webhook ID regenerated but coordinator is not loaded; "
+                        "reload the integration before testing the new URL."
+                    )
+                    url_info = build_webhook_url_info(hass, new_id)
+                else:
+                    url_info = register_omlet_webhook(
+                        hass,
+                        entry,
+                        active_coordinator,
+                        new_id,
+                        source="regenerate service",
+                    )
+            else:
+                url_info = build_webhook_url_info(hass, new_id)
 
             msg = (
-                f"Webhook ID regenerated. New URL: {url}. Update Omlet Developer Portal."
+                format_webhook_url_message(
+                    "Webhook ID regenerated. New URL:",
+                    url_info,
+                )
                 if enabled
-                else f"Webhook ID regenerated (webhooks disabled). New path: {url}. Enable webhooks to register."
+                else format_webhook_url_message(
+                    "Webhook ID regenerated while webhooks are disabled. New URL:",
+                    url_info,
+                )
             )
             _LOGGER.info(msg)
             try:

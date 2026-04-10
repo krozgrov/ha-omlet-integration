@@ -163,8 +163,18 @@ To avoid polling delays, enable webhooks:
 
 1. Enable **webhooks** in the integration options  
 2. (Optional) Set a `webhook_token`  
-3. Integration shows the webhook URL in a notification  
+3. Integration shows a random webhook URL in a notification
 4. Add this URL in the **Omlet Developer Portal → Manage Webhooks**
+
+The Omlet Developer Portal must use a full URL that is publicly reachable from
+Omlet's servers. Local-only URLs such as `/api/webhook/...`, `localhost`,
+`.local` hostnames, or private LAN IP addresses will fail from Omlet even if
+they work inside your home network.
+
+If you configure a `webhook_token`, this integration validates it strictly and
+rejects webhooks with a missing or mismatched token. Leave the token blank while
+troubleshooting reachability problems, or make sure the exact same token is set
+in the Omlet Developer Portal.
 
 Modes:
 

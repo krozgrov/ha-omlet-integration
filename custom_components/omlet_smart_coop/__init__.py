@@ -3,7 +3,6 @@ from __future__ import annotations
 from collections import defaultdict
 import logging
 import re
-import secrets
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -11,7 +10,6 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers import entity_registry as er
-from homeassistant.helpers.network import get_url
 
 from .coordinator import OmletDataCoordinator
 from .services import async_register_services
@@ -31,11 +29,14 @@ from .const import (
     CONF_DISABLE_POLLING,
     CONF_WEBHOOK_NOTIFIED_ID,
 )
-from homeassistant.components import webhook as hass_webhook
 from homeassistant.components import persistent_notification as pn
-from aiohttp.web import Response
 from .const import CONF_WEBHOOK_TIP_SHOWN
-from .webhook_helpers import get_expected_webhook_token, get_provided_webhook_token
+from .webhook_helpers import (
+    ensure_omlet_webhook_id,
+    format_webhook_url_message,
+    register_omlet_webhook,
+    unregister_omlet_webhook,
+)
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -378,98 +379,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Optionally register webhook support
     try:
         if entry.options.get(CONF_ENABLE_WEBHOOKS, False):
-            # Use a stable, random webhook id per entry
-            webhook_id = entry.data.get(CONF_WEBHOOK_ID)
-            # Migrate away from any prior fixed id (== DOMAIN)
-            if webhook_id == DOMAIN:
-                try:
-                    hass_webhook.async_unregister(hass, DOMAIN)
-                except Exception:
-                    pass
-                webhook_id = None
-            if not webhook_id:
-                # Generate a shorter, random hex ID (32 chars; 128-bit entropy)
-                webhook_id = secrets.token_hex(16)
-                hass.config_entries.async_update_entry(
-                    entry, data={**entry.data, CONF_WEBHOOK_ID: webhook_id}
-                )
-
-            async def _handle_webhook(hass, webhook_id_recv, request):
-                """Handle incoming Omlet webhook events."""
-                payload = None
-                try:
-                    try:
-                        payload = await request.json()
-                    except Exception:
-                        _LOGGER.debug("Webhook received non-JSON payload")
-
-                    expected = get_expected_webhook_token(entry)
-                    if expected:
-                        provided = get_provided_webhook_token(request, payload)
-                        if not provided or provided != expected:
-                            _LOGGER.warning("Rejected webhook: invalid token")
-                            return Response(status=401, text="invalid token")
-
-                    # Redacted logging: never log tokens; summarize event
-                    try:
-                        evt = {}
-                        if isinstance(payload, dict):
-                            nested = payload.get("payload")
-                            if isinstance(nested, dict):
-                                evt = nested
-                            else:
-                                evt = payload
-                        _LOGGER.debug(
-                            "Webhook event: device=%s param=%s old=%s new=%s",
-                            evt.get("deviceId"),
-                            evt.get("parameterName"),
-                            evt.get("oldValue"),
-                            evt.get("newValue"),
-                        )
-                    except Exception:
-                        _LOGGER.debug("Webhook event received (details redacted)")
-                except Exception as ex:
-                    _LOGGER.error("Error handling webhook: %s", ex)
-                    return Response(text="ok")
-                # Refresh data to sync state post-event (async so webhook returns fast).
-                try:
-                    hass.async_create_task(coordinator.async_request_refresh())
-                except Exception as ex:
-                    _LOGGER.debug("Failed to schedule webhook refresh: %r", ex)
-                return Response(text="ok")
-
-            # Register webhook in HA
-            # Ensure clean registration
-            try:
-                hass_webhook.async_unregister(hass, webhook_id)
-            except Exception:
-                pass
-            hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", webhook_id, _handle_webhook)
-
-            try:
-                webhook_url = hass_webhook.async_generate_url(hass, webhook_id)
-            except Exception as gen_err:
-                # Fallback: try HA base URL builder, then path-only
-                try:
-                    base = get_url(hass)
-                    webhook_url = f"{base}/api/webhook/{webhook_id}"
-                except Exception as url_err:
-                    webhook_url = f"/api/webhook/{webhook_id}"
-                    _LOGGER.debug(
-                        "Falling back to path-only webhook URL (setup). generate_url=%r, get_url=%r",
-                        gen_err,
-                        url_err,
-                    )
-            _LOGGER.info(
-                "Omlet Smart Coop webhook enabled. Configure at Omlet portal to POST to: %s",
-                webhook_url,
+            webhook_id = ensure_omlet_webhook_id(hass, entry)
+            url_info = register_omlet_webhook(
+                hass,
+                entry,
+                coordinator,
+                webhook_id,
+                source="setup",
             )
             # Notify only once per webhook_id unless rotated
             if entry.data.get(CONF_WEBHOOK_NOTIFIED_ID) != webhook_id:
                 try:
                     pn.async_create(
                         hass,
-                        f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
+                        format_webhook_url_message(
+                            "Webhook enabled. Use this URL:",
+                            url_info,
+                        ),
                         title="Omlet Smart Coop Webhook",
                     )
                 except Exception:
@@ -509,7 +435,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         try:
             webhook_id = entry.data.get(CONF_WEBHOOK_ID)
             if webhook_id:
-                hass_webhook.async_unregister(hass, webhook_id)
+                unregister_omlet_webhook(hass, webhook_id)
         except Exception as ex:
             _LOGGER.warning("Failed to unregister webhook: %s", ex)
 
@@ -549,84 +475,23 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
         current_id = entry.data.get(CONF_WEBHOOK_ID)
 
         if enabled:
-            # Ensure we have a random id; migrate from fixed id if needed
-            if not current_id or current_id == DOMAIN:
-                try:
-                    hass_webhook.async_unregister(hass, DOMAIN)
-                except Exception:
-                    pass
-                # Generate a shorter, random hex ID (32 chars)
-                current_id = secrets.token_hex(16)
-                hass.config_entries.async_update_entry(
-                    entry, data={**entry.data, CONF_WEBHOOK_ID: current_id}
-                )
-
-            # Unregister then register (idempotent)
-            try:
-                hass_webhook.async_unregister(hass, current_id)
-            except Exception:
-                pass
-
-            async def _handle_webhook(hass, webhook_id_recv, request):
-                payload = None
-                try:
-                    try:
-                        payload = await request.json()
-                    except Exception:
-                        pass
-                    expected = get_expected_webhook_token(entry)
-                    if expected:
-                        provided = get_provided_webhook_token(request, payload)
-                        if not provided or provided != expected:
-                            _LOGGER.warning("Rejected webhook: invalid token")
-                            return Response(status=401, text="invalid token")
-                    # Redacted logging: summarize event without secrets
-                    try:
-                        evt = {}
-                        if isinstance(payload, dict):
-                            nested = payload.get("payload")
-                            if isinstance(nested, dict):
-                                evt = nested
-                            else:
-                                evt = payload
-                        _LOGGER.debug(
-                            "Webhook event: device=%s param=%s old=%s new=%s",
-                            evt.get("deviceId"),
-                            evt.get("parameterName"),
-                            evt.get("oldValue"),
-                            evt.get("newValue"),
-                        )
-                    except Exception:
-                        pass
-                except Exception:
-                    return Response(text="ok")
-                try:
-                    hass.async_create_task(coordinator.async_request_refresh())
-                except Exception as ex:
-                    _LOGGER.debug("Failed to schedule webhook refresh: %r", ex)
-                return Response(text="ok")
-
-            hass_webhook.async_register(hass, DOMAIN, "Omlet Smart Coop", current_id, _handle_webhook)
-            try:
-                webhook_url = hass_webhook.async_generate_url(hass, current_id)
-            except Exception as gen_err:
-                try:
-                    base = get_url(hass)
-                    webhook_url = f"{base}/api/webhook/{current_id}"
-                except Exception as url_err:
-                    webhook_url = f"/api/webhook/{current_id}"
-                    _LOGGER.debug(
-                        "Falling back to path-only webhook URL (toggle). generate_url=%r, get_url=%r",
-                        gen_err,
-                        url_err,
-                    )
-            _LOGGER.info("Webhook enabled (enabled=%s, id=%s). URL: %s", enabled, current_id, webhook_url)
+            current_id = ensure_omlet_webhook_id(hass, entry)
+            url_info = register_omlet_webhook(
+                hass,
+                entry,
+                coordinator,
+                current_id,
+                source="options",
+            )
             # Notify only once per webhook_id unless rotated
             if entry.data.get(CONF_WEBHOOK_NOTIFIED_ID) != current_id:
                 try:
                     pn.async_create(
                         hass,
-                        f"Webhook enabled. Use this URL in Omlet Developer Portal → Manage Webhooks: {webhook_url}",
+                        format_webhook_url_message(
+                            "Webhook enabled. Use this URL:",
+                            url_info,
+                        ),
                         title="Omlet Smart Coop Webhook",
                     )
                 except Exception:
@@ -639,7 +504,7 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry):
             # Disabled: unregister current id if present
             if current_id:
                 try:
-                    hass_webhook.async_unregister(hass, current_id)
+                    unregister_omlet_webhook(hass, current_id)
                     _LOGGER.info("Webhook disabled and unregistered")
                 except Exception:
                     pass
