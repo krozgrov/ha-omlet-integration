@@ -3,7 +3,7 @@ from homeassistant.components.light import (
     LightEntity,
     ColorMode,
 )
-from .entity import OmletEntity, should_add_entity
+from .entity import OmletEntity, build_entity_unique_id, should_add_entity
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,7 +20,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         # Light Entity
         light_state = device_data.get("state", {}).get("light")
         if light_state:
-            unique_id = f"{device_id}_light"
+            unique_id = build_entity_unique_id(device_data, device_id, "light")
             if should_add_entity(hass, "light", unique_id):
                 lights.append(
                     OmletLight(
@@ -40,9 +40,7 @@ class OmletLight(OmletEntity, LightEntity):
         # Initialize the light entity.
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "light"
-        # Keep existing unique_id scheme for backward compatibility
-        # Stable unique_id not tied to names
-        self._attr_unique_id = f"{device_id}_light"
+        self._attr_unique_id = build_entity_unique_id(self._device_data, self.device_id, "light")
         self._attr_has_entity_name = True
         self._attr_supported_color_modes = {
             ColorMode.ONOFF
@@ -52,7 +50,7 @@ class OmletLight(OmletEntity, LightEntity):
     @property
     def is_on(self):
         # Return whether the light is on.
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         state = device_data.get("state", {}).get("light", {}).get("state")
         return state in ["on", "onpending"]
 
@@ -68,7 +66,7 @@ class OmletLight(OmletEntity, LightEntity):
 
     async def _execute_action(self, action):
         # Execute an action on the device.
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         action_url = next(
             (a["url"] for a in device_data.get("actions", []) if a["actionValue"] == action),
             None,

@@ -1,6 +1,6 @@
 from homeassistant.components.cover import CoverEntity
 from .const import DOMAIN
-from .entity import OmletEntity, should_add_entity
+from .entity import OmletEntity, build_entity_unique_id, should_add_entity
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,7 +29,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 for action in device_data.get("actions", []) or []
             )
             if has_door_actions:
-                door_unique_id = f"{device_id}_door"
+                door_unique_id = build_entity_unique_id(device_data, device_id, "door")
                 if should_add_entity(hass, "cover", door_unique_id):
                     covers.append(
                         OmletDoorCover(
@@ -47,7 +47,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
                 for action in device_data.get("actions", []) or []
             )
             if has_feeder_actions:
-                feeder_unique_id = f"{device_id}_feeder"
+                feeder_unique_id = build_entity_unique_id(device_data, device_id, "feeder")
                 if should_add_entity(hass, "cover", feeder_unique_id):
                     covers.append(
                         OmletFeederCover(
@@ -73,8 +73,7 @@ class OmletDoorCover(OmletEntity, CoverEntity):
         """
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "door"
-        # Stable unique_id not tied to names
-        self._attr_unique_id = f"{device_id}_door"
+        self._attr_unique_id = build_entity_unique_id(self._device_data, self.device_id, "door")
         self._attr_has_entity_name = True
 
     @property
@@ -84,7 +83,7 @@ class OmletDoorCover(OmletEntity, CoverEntity):
         Returns:
             bool: True if available, False otherwise
         """
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         state = device_data["state"]["door"]["state"]
         # Only unavailable during "stopping"
         return state != "stopping"
@@ -96,7 +95,7 @@ class OmletDoorCover(OmletEntity, CoverEntity):
         Returns:
             bool: True if opening, False otherwise
         """
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         state = device_data["state"]["door"]["state"]
         return state == "openpending"
 
@@ -107,7 +106,7 @@ class OmletDoorCover(OmletEntity, CoverEntity):
         Returns:
             bool: True if closing, False otherwise
         """
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         state = device_data["state"]["door"]["state"]
         return state == "closepending"
 
@@ -118,7 +117,7 @@ class OmletDoorCover(OmletEntity, CoverEntity):
         Returns:
             bool: True if closed, False otherwise
         """
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         state = device_data["state"]["door"]["state"]
         return state == "closed"
 
@@ -138,7 +137,7 @@ class OmletDoorCover(OmletEntity, CoverEntity):
         Args:
             action: The action to execute (open/close)
         """
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         action = (action or "").lower()
         action_url = next(
             (
@@ -159,34 +158,34 @@ class OmletFeederCover(OmletEntity, CoverEntity):
         """Initialize the cover."""
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "feeder"
-        self._attr_unique_id = f"{device_id}_feeder"
+        self._attr_unique_id = build_entity_unique_id(self._device_data, self.device_id, "feeder")
         self._attr_has_entity_name = True
 
     @property
     def available(self):
         """Return if entity is available."""
-        device_data = self.coordinator.data.get(self.device_id, {}) or {}
+        device_data = self._device_data
         state = ((device_data.get("state") or {}).get("feeder") or {}).get("state", "")
         return str(state).lower() != "stopping"
 
     @property
     def is_opening(self):
         """Return if the feeder is opening."""
-        device_data = self.coordinator.data.get(self.device_id, {}) or {}
+        device_data = self._device_data
         state = ((device_data.get("state") or {}).get("feeder") or {}).get("state", "")
         return str(state).lower() in {"openpending", "opening"}
 
     @property
     def is_closing(self):
         """Return if the feeder is closing."""
-        device_data = self.coordinator.data.get(self.device_id, {}) or {}
+        device_data = self._device_data
         state = ((device_data.get("state") or {}).get("feeder") or {}).get("state", "")
         return str(state).lower() in {"closepending", "closing"}
 
     @property
     def is_closed(self):
         """Return if the feeder is fully closed."""
-        device_data = self.coordinator.data.get(self.device_id, {}) or {}
+        device_data = self._device_data
         state = ((device_data.get("state") or {}).get("feeder") or {}).get("state", "")
         return str(state).lower() == "closed"
 
@@ -202,7 +201,7 @@ class OmletFeederCover(OmletEntity, CoverEntity):
 
     async def _execute_action(self, action):
         """Execute an action on the device."""
-        device_data = self.coordinator.data.get(self.device_id, {}) or {}
+        device_data = self._device_data
         action = (action or "").lower()
         action_url = next(
             (

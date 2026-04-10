@@ -1,12 +1,26 @@
 from __future__ import annotations
 
+from collections import defaultdict
+import logging
+import re
+import secrets
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers.network import get_url
 
 from .coordinator import OmletDataCoordinator
 from .services import async_register_services
+from .entity import (
+    build_entity_unique_id,
+    extract_known_suffix,
+    normalize_device_serial,
+)
+from .sensor import SENSOR_TYPES
 from .const import (
     DOMAIN,
     PLATFORMS,
@@ -20,17 +34,160 @@ from .const import (
 from homeassistant.components import webhook as hass_webhook
 from homeassistant.components import persistent_notification as pn
 from aiohttp.web import Response
-import secrets
-from homeassistant.helpers.network import get_url
-from homeassistant.helpers import entity_registry as er
 from .const import CONF_WEBHOOK_TIP_SHOWN
 from .webhook_helpers import get_expected_webhook_token, get_provided_webhook_token
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-import logging
-
 _LOGGER = logging.getLogger(__name__)
+
+_SERIAL_UNIQUE_ID_MIGRATION_FLAG = "unique_id_migrated_v3"
+_NUMERIC_ENTITY_ID_SUFFIX_RE = re.compile(r"_\d+$")
+_SERIAL_UNIQUE_ID_SUFFIXES = {
+    "fan",
+    "door",
+    "feeder",
+    "light",
+    *SENSOR_TYPES.keys(),
+    "fan_mode",
+    "fan_manual_speed",
+    "fan_time_speed_1",
+    "fan_time_speed_2",
+    "fan_time_speed_3",
+    "fan_time_speed_4",
+    "fan_thermostat_speed",
+    "tempOn",
+    "tempOff",
+    "timeOn1",
+    "timeOn2",
+    "timeOn3",
+    "timeOn4",
+    "timeOff1",
+    "timeOff2",
+    "timeOff3",
+    "timeOff4",
+}
+
+
+def _entity_has_numeric_suffix(entity_id: str) -> bool:
+    """Return True if the object_id ends with _<number>."""
+    object_id = entity_id.rsplit(".", 1)[-1]
+    return bool(_NUMERIC_ENTITY_ID_SUFFIX_RE.search(object_id))
+
+
+def _canonical_entity_sort_key(reg_entry, target_unique_id: str) -> tuple[int, int, str]:
+    """Prefer already-migrated entries, then original entity IDs, then lexical order."""
+    return (
+        0 if reg_entry.unique_id == target_unique_id else 1,
+        0 if not _entity_has_numeric_suffix(reg_entry.entity_id) else 1,
+        reg_entry.entity_id,
+    )
+
+
+async def _async_migrate_serial_unique_ids(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    coordinator: OmletDataCoordinator,
+) -> None:
+    """Migrate Omlet entities to serial-based unique IDs and disable stale duplicates."""
+    ent_reg = er.async_get(hass)
+    dev_reg = dr.async_get(hass)
+    config_entries = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
+
+    for device_id, device_data in (coordinator.data or {}).items():
+        serial = normalize_device_serial(device_data.get("deviceSerial"))
+        if not serial:
+            continue
+
+        ha_device = dev_reg.async_get_device(identifiers={(DOMAIN, serial)})
+        if ha_device is None:
+            _LOGGER.debug(
+                "Skip serial unique_id migration for device %s; no HA device found for serial %s",
+                device_id,
+                serial,
+            )
+            continue
+
+        reg_entries = [
+            reg_entry
+            for reg_entry in config_entries
+            if reg_entry.platform == DOMAIN and reg_entry.device_id == ha_device.id
+        ]
+        if not reg_entries:
+            continue
+
+        grouped_entries: dict[tuple[str, str], list] = defaultdict(list)
+        for reg_entry in reg_entries:
+            suffix = extract_known_suffix(
+                reg_entry.unique_id or "",
+                _SERIAL_UNIQUE_ID_SUFFIXES,
+            )
+            if not suffix:
+                continue
+            target_unique_id = build_entity_unique_id(device_data, device_id, suffix)
+            grouped_entries[(reg_entry.domain, target_unique_id)].append(reg_entry)
+
+        for (_, target_unique_id), candidates in grouped_entries.items():
+            canonical = min(
+                candidates,
+                key=lambda reg_entry: _canonical_entity_sort_key(
+                    reg_entry,
+                    target_unique_id,
+                ),
+            )
+            existing_target = ent_reg.async_get_entity_id(
+                canonical.domain,
+                DOMAIN,
+                target_unique_id,
+            )
+            if (
+                existing_target
+                and existing_target != canonical.entity_id
+                and existing_target not in {candidate.entity_id for candidate in candidates}
+            ):
+                _LOGGER.warning(
+                    "Skip serial unique_id migration for %s; target %s already bound to %s",
+                    canonical.entity_id,
+                    target_unique_id,
+                    existing_target,
+                )
+                continue
+
+            if canonical.unique_id != target_unique_id:
+                ent_reg.async_update_entity(
+                    canonical.entity_id,
+                    new_unique_id=target_unique_id,
+                )
+                _LOGGER.info(
+                    "Migrated unique_id v3 for %s from %s to %s",
+                    canonical.entity_id,
+                    canonical.unique_id,
+                    target_unique_id,
+                )
+
+            if canonical.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+                ent_reg.async_update_entity(canonical.entity_id, disabled_by=None)
+                _LOGGER.info(
+                    "Re-enabled canonical Omlet entity after serial migration: %s",
+                    canonical.entity_id,
+                )
+
+            for stale_entry in sorted(
+                candidates,
+                key=lambda reg_entry: reg_entry.entity_id,
+            ):
+                if stale_entry.entity_id == canonical.entity_id:
+                    continue
+                if stale_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+                    continue
+                ent_reg.async_update_entity(
+                    stale_entry.entity_id,
+                    disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+                )
+                _LOGGER.info(
+                    "Disabled stale Omlet duplicate entity after serial migration: %s",
+                    stale_entry.entity_id,
+                )
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
@@ -178,6 +335,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
     except Exception as ex:
         _LOGGER.warning("Unique_id migration v2 skipped due to error: %r", ex)
+
+    # Serial-based unique_id migration (v3): preserve entity identity across
+    # Omlet deviceId changes caused by reprovisioning or Wi-Fi resets.
+    try:
+        if not entry.data.get(_SERIAL_UNIQUE_ID_MIGRATION_FLAG):
+            await _async_migrate_serial_unique_ids(hass, entry, coordinator)
+            hass.config_entries.async_update_entry(
+                entry,
+                data={**entry.data, _SERIAL_UNIQUE_ID_MIGRATION_FLAG: True},
+            )
+    except Exception as ex:
+        _LOGGER.warning("Unique_id migration v3 skipped due to error: %r", ex)
 
     # Optionally register webhook support
     try:

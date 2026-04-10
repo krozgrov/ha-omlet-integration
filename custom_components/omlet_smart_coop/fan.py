@@ -7,7 +7,7 @@ from homeassistant.components import persistent_notification as pn
 from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
-from .entity import OmletEntity, should_add_entity
+from .entity import OmletEntity, build_entity_unique_id, should_add_entity
 from .const import CONF_ENABLE_WEBHOOKS
 
 _LOGGER = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         fan_cfg = device_data.get("configuration", {}).get("fan")
         if not fan_state and not fan_cfg:
             continue
-        unique_id = f"{device_id}_fan"
+        unique_id = build_entity_unique_id(device_data, device_id, "fan")
         if should_add_entity(hass, "fan", unique_id):
             fans.append(OmletFan(coordinator, device_id, device_data["name"]))
 
@@ -42,7 +42,7 @@ class OmletFan(OmletEntity, FanEntity):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "fan"
-        self._attr_unique_id = f"{device_id}_fan"
+        self._attr_unique_id = build_entity_unique_id(self._device_data, self.device_id, "fan")
         self._attr_has_entity_name = True
         # Always expose the fan as a basic on/off toggle in HA. Omlet's `actions`
         # list can be omitted temporarily, but core fan services should still work.
@@ -52,7 +52,7 @@ class OmletFan(OmletEntity, FanEntity):
         self._optimistic_until: float = 0.0
 
     def _device_state(self) -> dict[str, Any]:
-        return self.coordinator.data.get(self.device_id, {})
+        return self._device_data
 
     def _fan_state(self) -> dict[str, Any]:
         return self._device_state().get("state", {}).get("fan", {}) or {}
@@ -177,7 +177,7 @@ class OmletFan(OmletEntity, FanEntity):
             if mode and mode != "manual":
                 try:
                     await self.coordinator.api_client.patch_device_configuration(
-                        self.device_id, {"fan": {"mode": "manual"}}
+                        self.current_device_id, {"fan": {"mode": "manual"}}
                     )
                     # Give the device a brief moment to apply the mode switch before actioning "on".
                     await asyncio.sleep(0.5)
@@ -197,7 +197,7 @@ class OmletFan(OmletEntity, FanEntity):
         if mode and mode != "manual":
             try:
                 await self.coordinator.api_client.patch_device_configuration(
-                    self.device_id, {"fan": {"mode": "manual"}}
+                    self.current_device_id, {"fan": {"mode": "manual"}}
                 )
                 if getattr(self, "hass", None):
                     friendly = "Thermostatic" if mode == "temperature" else "Time" if mode == "time" else mode

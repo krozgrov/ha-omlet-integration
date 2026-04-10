@@ -1,3 +1,6 @@
+from collections.abc import Iterable, Mapping
+from typing import Any
+
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers import entity_registry as er
 from homeassistant.core import HomeAssistant
@@ -15,6 +18,10 @@ class OmletEntity(CoordinatorEntity):
         """Initialize the entity"""
         super().__init__(coordinator)
         self.device_id = device_id
+        self._stable_identity = get_stable_device_identity(
+            coordinator.data.get(device_id),
+            device_id,
+        )
 
     @property
     def _device_data(self) -> dict:
@@ -23,7 +30,19 @@ class OmletEntity(CoordinatorEntity):
         Avoid caching device data at init-time; coordinator updates should be reflected
         immediately in device_info and attributes.
         """
-        return self.coordinator.data.get(self.device_id, {}) or {}
+        data = self.coordinator.data.get(self.device_id, {}) or {}
+        if data:
+            return data
+
+        for candidate_device_id, candidate_data in (self.coordinator.data or {}).items():
+            if get_stable_device_identity(candidate_data, candidate_device_id) != self._stable_identity:
+                continue
+            current_device_id = candidate_data.get("deviceId") or candidate_device_id
+            if current_device_id and current_device_id != self.device_id:
+                self.device_id = current_device_id
+            return candidate_data or {}
+
+        return {}
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -61,6 +80,12 @@ class OmletEntity(CoordinatorEntity):
         }
         return {key: value for key, value in attributes.items() if value is not None}
 
+    @property
+    def current_device_id(self) -> str:
+        """Return the latest runtime deviceId for API actions."""
+        data = self._device_data
+        return str(data.get("deviceId") or self.device_id)
+
 
 def should_add_entity(hass: HomeAssistant, entity_domain: str, unique_id: str) -> bool:
     """Return True if an entity with unique_id is not already loaded."""
@@ -75,3 +100,44 @@ def should_add_entity(hass: HomeAssistant, entity_domain: str, unique_id: str) -
         )
         return False
     return True
+
+
+def normalize_device_serial(serial: Any) -> str | None:
+    """Return a usable serial string, or None if not available."""
+    if serial is None:
+        return None
+    normalized = str(serial).strip()
+    if not normalized or normalized.lower() == "unknown":
+        return None
+    return normalized
+
+
+def get_stable_device_identity(
+    device_data: Mapping[str, Any] | None,
+    fallback_device_id: str | None,
+) -> str:
+    """Return the stable identity for a device."""
+    data = device_data or {}
+    serial = normalize_device_serial(data.get("deviceSerial"))
+    if serial:
+        return serial
+    device_id = data.get("deviceId") or fallback_device_id
+    return str(device_id)
+
+
+def build_entity_unique_id(
+    device_data: Mapping[str, Any] | None,
+    fallback_device_id: str | None,
+    suffix: str,
+) -> str:
+    """Build a unique_id from the stable device identity and entity suffix."""
+    clean_suffix = str(suffix).lstrip("_")
+    return f"{get_stable_device_identity(device_data, fallback_device_id)}_{clean_suffix}"
+
+
+def extract_known_suffix(unique_id: str, known_suffixes: Iterable[str]) -> str | None:
+    """Return the matching entity suffix from a known suffix allowlist."""
+    for suffix in sorted(known_suffixes, key=len, reverse=True):
+        if unique_id.endswith(f"_{suffix}"):
+            return suffix
+    return None

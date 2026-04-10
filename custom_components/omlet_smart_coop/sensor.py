@@ -8,7 +8,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfTime
 from homeassistant.helpers.entity import EntityCategory
-from .entity import OmletEntity, should_add_entity
+from .entity import OmletEntity, build_entity_unique_id, should_add_entity
 from homeassistant.helpers.typing import StateType
 from .const import DOMAIN
 import logging
@@ -269,7 +269,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
 
             value = extract_sensor_value(key, device_data)
             if value is not None:
-                unique_id = f"{device_id}_{description.key}"
+                unique_id = build_entity_unique_id(device_data, device_id, description.key)
                 if not should_add_entity(hass, "sensor", unique_id):
                     continue
                 sensors.append(
@@ -410,7 +410,11 @@ class OmletSensor(OmletEntity, SensorEntity):
         super().__init__(coordinator, device_id)
         self.entity_description = description
         self._attr_translation_key = description.key
-        self._attr_unique_id = f"{device_id}_{description.key}"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            description.key,
+        )
         self._attr_device_class = description.device_class
         self._attr_entity_category = description.entity_category
         self._attr_native_unit_of_measurement = description.native_unit_of_measurement
@@ -419,5 +423,5 @@ class OmletSensor(OmletEntity, SensorEntity):
     @property
     def native_value(self) -> StateType:
         """Return the current value of the sensor."""
-        device_data = self.coordinator.data.get(self.device_id, {})
+        device_data = self._device_data
         return extract_sensor_value(self.entity_description.key, device_data)

@@ -16,6 +16,12 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.04.10 – Stable Entity Identity
+
+- **Fixed**: Prevent stale unavailable duplicate entities after Omlet device re-add or Wi-Fi reprovision.
+- **Changed**: Entity identity now uses device serial when available, while API actions continue using the current Omlet `deviceId`.
+- **Changed**: Entity-affecting migration now automatically disables stale duplicates and restores canonical entities where possible.
+
 ## 2026.01.29 – Hassfest Services Fix
 
 - **Fixed**: `restart_device` service now uses a device selector field (hassfest compliant).

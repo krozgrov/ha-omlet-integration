@@ -7,7 +7,7 @@ from homeassistant.helpers.entity import EntityCategory
 from homeassistant.util.unit_conversion import TemperatureConverter
 
 from .const import DOMAIN
-from .entity import OmletEntity, should_add_entity
+from .entity import OmletEntity, build_entity_unique_id, should_add_entity
 from .fan_helpers import iter_fan_devices
 
 _LOGGER = logging.getLogger(__name__)
@@ -18,9 +18,17 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities: list[NumberEntity] = []
     for device_id, device_data in iter_fan_devices(coordinator):
         name = device_data.get("name") or device_id
-        if should_add_entity(hass, "number", f"{device_id}_tempOn"):
+        if should_add_entity(
+            hass,
+            "number",
+            build_entity_unique_id(device_data, device_id, "tempOn"),
+        ):
             entities.append(OmletFanTempOn(coordinator, device_id, name))
-        if should_add_entity(hass, "number", f"{device_id}_tempOff"):
+        if should_add_entity(
+            hass,
+            "number",
+            build_entity_unique_id(device_data, device_id, "tempOff"),
+        ):
             entities.append(OmletFanTempOff(coordinator, device_id, name))
 
     async_add_entities(entities)
@@ -44,7 +52,11 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
         # With has_entity_name=True, HA will prefix the device name automatically.
         # Keep the entity name short for mobile UI.
         self._attr_translation_key = self._TRANSLATION_KEY
-        self._attr_unique_id = f"{device_id}_{self._CFG_KEY}"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            self._CFG_KEY,
+        )
         self._attr_has_entity_name = True
         self._attr_native_step = native_step
         self._attr_mode = NumberMode.BOX
@@ -67,7 +79,7 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
         self._attr_native_max_value = float(round(max_v))
 
     def _fan_cfg(self) -> dict[str, Any]:
-        return (self.coordinator.data.get(self.device_id, {}) or {}).get("configuration", {}).get("fan", {}) or {}
+        return (self._device_data.get("configuration", {}) or {}).get("fan", {}) or {}
 
     @property
     def native_value(self) -> float | None:
@@ -83,7 +95,8 @@ class _OmletFanNumberBase(OmletEntity, NumberEntity):
     async def async_set_native_value(self, value: float) -> None:
         api_val = TemperatureConverter.convert(value, self._display_unit, self._api_unit)
         await self.coordinator.api_client.patch_device_configuration(
-            self.device_id, {"fan": {self._CFG_KEY: int(round(api_val))}}
+            self.current_device_id,
+            {"fan": {self._CFG_KEY: int(round(api_val))}},
         )
         await self.coordinator.async_request_refresh()
 

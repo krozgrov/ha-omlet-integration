@@ -202,7 +202,7 @@ class OmletDataCoordinator(DataUpdateCoordinator):
 
         parsed_device = {
             "deviceId": device.get("deviceId"),
-            "deviceSerial": device.get("deviceSerial", "Unknown"),
+            "deviceSerial": device.get("deviceSerial"),
             "firmware": firmware,
             "name": device.get("name", "Unknown"),
             "deviceType": device.get("deviceType", "Unknown Model"),

@@ -7,7 +7,7 @@ from homeassistant.helpers.entity_registry import async_get as async_get_entity_
 from homeassistant.helpers.entity import EntityCategory
 
 from .const import DOMAIN
-from .entity import OmletEntity, should_add_entity
+from .entity import OmletEntity, build_entity_unique_id, should_add_entity
 from .fan_helpers import FAN_SPEED_MAP, iter_fan_devices, patch_fan_config_and_refresh
 
 _LOGGER = logging.getLogger(__name__)
@@ -24,19 +24,47 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     entities: list[SelectEntity] = []
     for device_id, device_data in iter_fan_devices(coordinator):
         name = device_data.get("name") or device_id
-        if should_add_entity(hass, "select", f"{device_id}_fan_mode"):
+        if should_add_entity(
+            hass,
+            "select",
+            build_entity_unique_id(device_data, device_id, "fan_mode"),
+        ):
             entities.append(OmletFanModeSelect(coordinator, device_id, name))
-        if should_add_entity(hass, "select", f"{device_id}_fan_manual_speed"):
+        if should_add_entity(
+            hass,
+            "select",
+            build_entity_unique_id(device_data, device_id, "fan_manual_speed"),
+        ):
             entities.append(OmletFanManualSpeedSelect(coordinator, device_id, name))
-        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_1"):
+        if should_add_entity(
+            hass,
+            "select",
+            build_entity_unique_id(device_data, device_id, "fan_time_speed_1"),
+        ):
             entities.append(OmletFanTimeSpeed1Select(coordinator, device_id, name))
-        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_2"):
+        if should_add_entity(
+            hass,
+            "select",
+            build_entity_unique_id(device_data, device_id, "fan_time_speed_2"),
+        ):
             entities.append(OmletFanTimeSpeed2Select(coordinator, device_id, name))
-        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_3"):
+        if should_add_entity(
+            hass,
+            "select",
+            build_entity_unique_id(device_data, device_id, "fan_time_speed_3"),
+        ):
             entities.append(OmletFanTimeSpeed3Select(coordinator, device_id, name))
-        if should_add_entity(hass, "select", f"{device_id}_fan_time_speed_4"):
+        if should_add_entity(
+            hass,
+            "select",
+            build_entity_unique_id(device_data, device_id, "fan_time_speed_4"),
+        ):
             entities.append(OmletFanTimeSpeed4Select(coordinator, device_id, name))
-        if should_add_entity(hass, "select", f"{device_id}_fan_thermostat_speed"):
+        if should_add_entity(
+            hass,
+            "select",
+            build_entity_unique_id(device_data, device_id, "fan_thermostat_speed"),
+        ):
             entities.append(OmletFanThermostatSpeedSelect(coordinator, device_id, name))
 
     async_add_entities(entities)
@@ -50,13 +78,13 @@ class OmletFanModeSelect(OmletEntity, SelectEntity):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "fan_mode"
-        self._attr_unique_id = f"{device_id}_fan_mode"
+        self._attr_unique_id = build_entity_unique_id(self._device_data, self.device_id, "fan_mode")
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
         self._attr_entity_category = EntityCategory.CONFIG
 
     def _fan_cfg(self) -> dict[str, Any]:
-        return (self.coordinator.data.get(self.device_id, {}) or {}).get("configuration", {}).get("fan", {}) or {}
+        return (self._device_data.get("configuration", {}) or {}).get("fan", {}) or {}
 
     @property
     def current_option(self) -> str | None:
@@ -70,7 +98,7 @@ class OmletFanModeSelect(OmletEntity, SelectEntity):
         await patch_fan_config_and_refresh(
             self.hass,
             self.coordinator,
-            self.device_id,
+            self.current_device_id,
             {"mode": self._MAP[option]},
             cycle_if_on=True,
         )
@@ -83,13 +111,17 @@ class OmletFanManualSpeedSelect(OmletEntity, SelectEntity):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "fan_manual_speed"
-        self._attr_unique_id = f"{device_id}_fan_manual_speed"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            "fan_manual_speed",
+        )
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
         self._attr_entity_category = EntityCategory.CONFIG
 
     def _fan_cfg(self) -> dict[str, Any]:
-        return (self.coordinator.data.get(self.device_id, {}) or {}).get("configuration", {}).get("fan", {}) or {}
+        return (self._device_data.get("configuration", {}) or {}).get("fan", {}) or {}
 
     @property
     def current_option(self) -> str | None:
@@ -111,7 +143,7 @@ class OmletFanManualSpeedSelect(OmletEntity, SelectEntity):
         await patch_fan_config_and_refresh(
             self.hass,
             self.coordinator,
-            self.device_id,
+            self.current_device_id,
             {"mode": "manual", "manualSpeed": self._MAP[option]},
             cycle_if_on=True,
         )
@@ -124,13 +156,17 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "fan_time_speed_1"
-        self._attr_unique_id = f"{device_id}_fan_time_speed_1"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            "fan_time_speed_1",
+        )
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
         self._attr_entity_category = EntityCategory.CONFIG
 
     def _fan_cfg(self) -> dict[str, Any]:
-        return (self.coordinator.data.get(self.device_id, {}) or {}).get("configuration", {}).get("fan", {}) or {}
+        return (self._device_data.get("configuration", {}) or {}).get("fan", {}) or {}
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
@@ -158,7 +194,7 @@ class OmletFanTimeSpeed1Select(OmletEntity, SelectEntity):
         await patch_fan_config_and_refresh(
             self.hass,
             self.coordinator,
-            self.device_id,
+            self.current_device_id,
             {"timeSpeed1": self._MAP[option]},
             cycle_if_on=True,
         )
@@ -168,7 +204,11 @@ class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
         self._attr_translation_key = "fan_time_speed_2"
-        self._attr_unique_id = f"{device_id}_fan_time_speed_2"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            "fan_time_speed_2",
+        )
 
     @property
     def current_option(self) -> str | None:
@@ -187,7 +227,7 @@ class OmletFanTimeSpeed2Select(OmletFanTimeSpeed1Select):
         await patch_fan_config_and_refresh(
             self.hass,
             self.coordinator,
-            self.device_id,
+            self.current_device_id,
             {"timeSpeed2": self._MAP[option]},
             cycle_if_on=True,
         )
@@ -197,7 +237,11 @@ class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
         self._attr_translation_key = "fan_time_speed_3"
-        self._attr_unique_id = f"{device_id}_fan_time_speed_3"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            "fan_time_speed_3",
+        )
 
     @property
     def current_option(self) -> str | None:
@@ -216,7 +260,7 @@ class OmletFanTimeSpeed3Select(OmletFanTimeSpeed2Select):
         await patch_fan_config_and_refresh(
             self.hass,
             self.coordinator,
-            self.device_id,
+            self.current_device_id,
             {"timeSpeed3": self._MAP[option]},
             cycle_if_on=True,
         )
@@ -226,7 +270,11 @@ class OmletFanTimeSpeed4Select(OmletFanTimeSpeed2Select):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id, device_name)
         self._attr_translation_key = "fan_time_speed_4"
-        self._attr_unique_id = f"{device_id}_fan_time_speed_4"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            "fan_time_speed_4",
+        )
 
     @property
     def current_option(self) -> str | None:
@@ -245,7 +293,7 @@ class OmletFanTimeSpeed4Select(OmletFanTimeSpeed2Select):
         await patch_fan_config_and_refresh(
             self.hass,
             self.coordinator,
-            self.device_id,
+            self.current_device_id,
             {"timeSpeed4": self._MAP[option]},
             cycle_if_on=True,
         )
@@ -258,13 +306,17 @@ class OmletFanThermostatSpeedSelect(OmletEntity, SelectEntity):
     def __init__(self, coordinator, device_id: str, device_name: str) -> None:
         super().__init__(coordinator, device_id)
         self._attr_translation_key = "fan_thermostat_speed"
-        self._attr_unique_id = f"{device_id}_fan_thermostat_speed"
+        self._attr_unique_id = build_entity_unique_id(
+            self._device_data,
+            self.device_id,
+            "fan_thermostat_speed",
+        )
         self._attr_options = self._OPTIONS
         self._attr_has_entity_name = True
         self._attr_entity_category = EntityCategory.CONFIG
 
     def _fan_cfg(self) -> dict[str, Any]:
-        return (self.coordinator.data.get(self.device_id, {}) or {}).get("configuration", {}).get("fan", {}) or {}
+        return (self._device_data.get("configuration", {}) or {}).get("fan", {}) or {}
 
     @property
     def current_option(self) -> str | None:
@@ -283,7 +335,7 @@ class OmletFanThermostatSpeedSelect(OmletEntity, SelectEntity):
         await patch_fan_config_and_refresh(
             self.hass,
             self.coordinator,
-            self.device_id,
+            self.current_device_id,
             {"tempSpeed": self._MAP[option]},
             cycle_if_on=True,
         )
