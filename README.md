@@ -16,6 +16,10 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.04.10b3 – Stale Duplicate Cleanup
+
+- **Changed**: Remove stale duplicate entity registry entries after serial migration instead of leaving them disabled.
+
 ## 2026.04.10b2 – Startup Guard Fix
 
 - **Fixed**: Restore serial-migrated entities normally at startup instead of leaving restored placeholders stuck as unavailable.

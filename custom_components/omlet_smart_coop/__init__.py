@@ -42,6 +42,7 @@ CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 _LOGGER = logging.getLogger(__name__)
 
 _SERIAL_UNIQUE_ID_MIGRATION_FLAG = "unique_id_migrated_v3"
+_STALE_DUPLICATE_CLEANUP_FLAG = "stale_duplicate_cleanup_v1"
 _NUMERIC_ENTITY_ID_SUFFIX_RE = re.compile(r"_\d+$")
 _SERIAL_UNIQUE_ID_SUFFIXES = {
     "fan",
@@ -88,8 +89,10 @@ async def _async_migrate_serial_unique_ids(
     hass: HomeAssistant,
     entry: ConfigEntry,
     coordinator: OmletDataCoordinator,
+    *,
+    remove_stale_duplicates: bool = False,
 ) -> None:
-    """Migrate Omlet entities to serial-based unique IDs and disable stale duplicates."""
+    """Migrate Omlet entities to serial-based unique IDs and clean stale duplicates."""
     ent_reg = er.async_get(hass)
     dev_reg = dr.async_get(hass)
     config_entries = er.async_entries_for_config_entry(ent_reg, entry.entry_id)
@@ -177,6 +180,13 @@ async def _async_migrate_serial_unique_ids(
                 key=lambda reg_entry: reg_entry.entity_id,
             ):
                 if stale_entry.entity_id == canonical.entity_id:
+                    continue
+                if remove_stale_duplicates:
+                    ent_reg.async_remove(stale_entry.entity_id)
+                    _LOGGER.info(
+                        "Removed stale Omlet duplicate entity after serial migration: %s",
+                        stale_entry.entity_id,
+                    )
                     continue
                 if stale_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
                     continue
@@ -347,6 +357,23 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
     except Exception as ex:
         _LOGGER.warning("Unique_id migration v3 skipped due to error: %r", ex)
+
+    # Follow-up cleanup (v4): remove stale duplicate registry entries that v3 left
+    # disabled, so they no longer clutter Home Assistant's disabled entity list.
+    try:
+        if not entry.data.get(_STALE_DUPLICATE_CLEANUP_FLAG):
+            await _async_migrate_serial_unique_ids(
+                hass,
+                entry,
+                coordinator,
+                remove_stale_duplicates=True,
+            )
+            hass.config_entries.async_update_entry(
+                entry,
+                data={**entry.data, _STALE_DUPLICATE_CLEANUP_FLAG: True},
+            )
+    except Exception as ex:
+        _LOGGER.warning("Stale duplicate cleanup skipped due to error: %r", ex)
 
     # Optionally register webhook support
     try:
