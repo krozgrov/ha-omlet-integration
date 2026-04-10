@@ -16,6 +16,10 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.04.10b2 – Startup Guard Fix
+
+- **Fixed**: Restore serial-migrated entities normally at startup instead of leaving restored placeholders stuck as unavailable.
+
 ## 2026.04.10 – Stable Entity Identity
 
 - **Fixed**: Prevent stale unavailable duplicate entities after Omlet device re-add or Wi-Fi reprovision.

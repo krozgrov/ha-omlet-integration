@@ -2,6 +2,7 @@ from collections.abc import Iterable, Mapping
 from typing import Any
 
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers import entity_component as ec
 from homeassistant.helpers import entity_registry as er
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -88,10 +89,17 @@ class OmletEntity(CoordinatorEntity):
 
 
 def should_add_entity(hass: HomeAssistant, entity_domain: str, unique_id: str) -> bool:
-    """Return True if an entity with unique_id is not already loaded."""
+    """Return True if an entity with unique_id is not already live in HA.
+
+    Restored states can exist in the state machine before the entity object has
+    been instantiated for the current runtime. Guard only against entities that
+    are actually loaded in the target EntityComponent, otherwise startup can
+    leave restored placeholders stuck as unavailable.
+    """
     ent_reg = er.async_get(hass)
     existing = ent_reg.async_get_entity_id(entity_domain, DOMAIN, unique_id)
-    if existing and hass.states.get(existing) is not None:
+    entity_comp = hass.data.get(ec.DATA_INSTANCES, {}).get(entity_domain)
+    if existing and entity_comp and entity_comp.get_entity(existing) is not None:
         _LOGGER.debug(
             "Skipping add for %s %s; entity already loaded as %s",
             entity_domain,
