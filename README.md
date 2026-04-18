@@ -16,19 +16,11 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.04.10b3 – Stale Duplicate Cleanup
+## 2026.04.18 – Stable entity identity and webhooks
 
-- **Changed**: Remove stale duplicate entity registry entries after serial migration instead of leaving them disabled.
-
-## 2026.04.10b2 – Startup Guard Fix
-
-- **Fixed**: Restore serial-migrated entities normally at startup instead of leaving restored placeholders stuck as unavailable.
-
-## 2026.04.10 – Stable Entity Identity
-
-- **Fixed**: Prevent stale unavailable duplicate entities after Omlet device re-add or Wi-Fi reprovision.
-- **Changed**: Entity identity now uses device serial when available, while API actions continue using the current Omlet `deviceId`.
-- **Changed**: Entity-affecting migration now automatically disables stale duplicates and restores canonical entities where possible.
+- **Fixed**: Prevent stale unavailable duplicate entities after Omlet device re-add or Wi-Fi reprovision; restore serial-migrated entities at startup; remove stale duplicate registry entries after serial migration instead of leaving them disabled.
+- **Changed**: Entity identity uses device serial when available, while API actions continue using the current Omlet `deviceId`; entity-affecting migration disables stale duplicates and restores canonical entities where possible.
+- **Changed**: Webhook handling refactored for reliability; optional strict `webhook_token` validation. Configure a publicly reachable webhook URL in the Omlet Developer Portal (see Webhooks section below).
 
 ---
 
