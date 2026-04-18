@@ -2,8 +2,6 @@
 
 from unittest.mock import AsyncMock, patch
 
-import pytest
-
 from aiohttp import ClientError
 
 from homeassistant.config_entries import ConfigEntryState
