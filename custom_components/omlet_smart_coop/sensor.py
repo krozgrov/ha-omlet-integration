@@ -50,12 +50,14 @@ SENSOR_TYPES = {
         key="fan_temperature",
         device_class=SensorDeviceClass.TEMPERATURE,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:thermometer",
     ),
     "fan_humidity": SensorEntityDescription(
         key="fan_humidity",
         device_class=SensorDeviceClass.HUMIDITY,
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:water-percent",
     ),
     "fan_mode": SensorEntityDescription(
@@ -99,6 +101,7 @@ SENSOR_TYPES = {
         key="wifi_strength",
         device_class=SensorDeviceClass.SIGNAL_STRENGTH,
         native_unit_of_measurement="dBm",
+        state_class=SensorStateClass.MEASUREMENT,
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:wifi-strength-3",
     ),
@@ -114,6 +117,7 @@ SENSOR_TYPES = {
     "door_light_level": SensorEntityDescription(
         key="door_light_level",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:brightness-6",
     ),
     "door_open_mode": SensorEntityDescription(
@@ -138,11 +142,13 @@ SENSOR_TYPES = {
     "feeder_feed_level": SensorEntityDescription(
         key="feeder_feed_level",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:grain",
     ),
     "feeder_light_level": SensorEntityDescription(
         key="feeder_light_level",
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:brightness-6",
     ),
     "feeder_mode": SensorEntityDescription(
