@@ -5,6 +5,7 @@ from homeassistant.components.sensor import (
     SensorEntity,
     SensorDeviceClass,
     SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.const import PERCENTAGE, UnitOfTemperature, UnitOfTime
 from homeassistant.helpers.entity import EntityCategory
@@ -21,6 +22,7 @@ SENSOR_TYPES = {
         key="battery_level",
         device_class=SensorDeviceClass.BATTERY,
         native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
         icon="mdi:battery",
     ),
     "power_source": SensorEntityDescription(
