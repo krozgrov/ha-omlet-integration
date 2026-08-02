@@ -16,11 +16,11 @@ If you find this integration useful, consider supporting development:
 
 ---
 
-## 2026.04.18 – Stable entity identity and webhooks
+## 2026.08.02 – Long-term sensor statistics
 
-- **Fixed**: Prevent stale unavailable duplicate entities after Omlet device re-add or Wi-Fi reprovision; restore serial-migrated entities at startup; remove stale duplicate registry entries after serial migration instead of leaving them disabled.
-- **Changed**: Entity identity uses device serial when available, while API actions continue using the current Omlet `deviceId`; entity-affecting migration disables stale duplicates and restores canonical entities where possible.
-- **Changed**: Webhook handling refactored for reliability; optional strict `webhook_token` validation. Configure a publicly reachable webhook URL in the Omlet Developer Portal (see Webhooks section below).
+- **Fixed**: Enable long-term statistics for battery level so future battery history remains available after Home Assistant purges detailed recorder history.
+- **Changed**: Extend measurement statistics to fan temperature, fan humidity, Wi-Fi strength, door light level, feeder feed level, and feeder light level.
+- **Note**: Previously purged history cannot be restored; Home Assistant retains future hourly minimum, maximum, and mean statistics.
 
 ---
 
