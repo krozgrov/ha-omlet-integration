@@ -31,6 +31,7 @@ from .const import (
     SERVICE_RESTART_DEVICE,
     SERVICE_UPDATE_OVERNIGHT_SLEEP,
     SERVICE_UPDATE_DOOR_SCHEDULE,
+    SERVICE_UPDATE_FEEDER_SCHEDULE,
     SERVICE_SHOW_WEBHOOK_URL,
     CONF_WEBHOOK_ID,
     CONF_ENABLE_WEBHOOKS,
@@ -42,6 +43,10 @@ from .const import (
     ATTR_CLOSE_TIME,
     VALID_DOOR_MODES,
     ATTR_DOOR_MODE,
+    ATTR_FEEDER_MODE,
+    ATTR_TIME_SLOT,
+    ATTR_OPEN_LIGHT_LEVEL,
+    ATTR_CLOSE_LIGHT_LEVEL,
     ATTR_POLL_MODE,
     POLL_MODE_RESPONSIVE,
     POLL_MODE_POWER_SAVINGS,
@@ -714,6 +719,61 @@ async def async_register_services(
         except Exception as err:
             _LOGGER.error("Failed to update door schedule: %s", err)
 
+    async def handle_update_feeder_schedule(call: ServiceCall) -> None:
+        """Handle updating the feeder open/close schedule."""
+        try:
+            targets = await _targets(call)
+            if not targets:
+                return
+
+            mode = call.data.get(ATTR_FEEDER_MODE)
+            if mode is not None and mode not in VALID_DOOR_MODES:
+                raise ServiceValidationError(
+                    f"Invalid feeder mode '{mode}'. Valid: {', '.join(VALID_DOOR_MODES)}"
+                )
+            slot = int(call.data.get(ATTR_TIME_SLOT, 1))
+            if not 1 <= slot <= 4:
+                raise ServiceValidationError("time_slot must be between 1 and 4")
+
+            # Partial PATCH: only send the keys the caller provided.
+            feeder_patch: dict[str, Any] = {}
+            if mode is not None:
+                feeder_patch["mode"] = mode
+            for attr, key in ((ATTR_OPEN_TIME, f"openTime{slot}"), (ATTR_CLOSE_TIME, f"closeTime{slot}")):
+                if (val := _fmt_time_hhmm(call.data.get(attr))) is not None:
+                    feeder_patch[key] = val
+            for attr, key in (
+                (ATTR_OPEN_LIGHT_LEVEL, "openLightLevel"),
+                (ATTR_CLOSE_LIGHT_LEVEL, "closeLightLevel"),
+            ):
+                if call.data.get(attr) is not None:
+                    feeder_patch[key] = int(call.data[attr])
+            if not feeder_patch:
+                raise ServiceValidationError("Nothing to update")
+
+            for coord, integration_device_ids in targets:
+                for device_id in integration_device_ids:
+                    try:
+                        await coord.api_client.patch_device_configuration(
+                            device_id, {"feeder": feeder_patch}
+                        )
+                        _LOGGER.info(
+                            "Updated feeder schedule for %s: %s",
+                            coord.devices[device_id]["name"],
+                            feeder_patch,
+                        )
+                    except Exception as err:
+                        _LOGGER.error(
+                            "Failed to update feeder schedule for device %s: %s",
+                            device_id,
+                            err,
+                        )
+                await coord.async_request_refresh()
+        except ServiceValidationError:
+            raise
+        except Exception as err:
+            _LOGGER.error("Failed to update feeder schedule: %s", err)
+
     async def handle_set_fan_mode(call: ServiceCall) -> None:
         """Set fan mode (manual/time/thermostatic) and optionally apply mode-specific settings."""
         try:
@@ -863,6 +923,7 @@ async def async_register_services(
     _register(SERVICE_RESTART_DEVICE, handle_restart_device)
     _register(SERVICE_UPDATE_OVERNIGHT_SLEEP, handle_update_overnight_sleep)
     _register(SERVICE_UPDATE_DOOR_SCHEDULE, handle_update_door_schedule)
+    _register(SERVICE_UPDATE_FEEDER_SCHEDULE, handle_update_feeder_schedule)
     _register(SERVICE_SHOW_WEBHOOK_URL, handle_show_webhook_url)
     _register("regenerate_webhook_id", handle_regenerate_webhook_id)
     _register("turn_fan_on", handle_turn_fan_on)
@@ -878,6 +939,7 @@ def async_remove_services(hass: HomeAssistant) -> None:
         SERVICE_CLOSE_DOOR,
         SERVICE_UPDATE_OVERNIGHT_SLEEP,
         SERVICE_UPDATE_DOOR_SCHEDULE,
+    SERVICE_UPDATE_FEEDER_SCHEDULE,
         SERVICE_SHOW_WEBHOOK_URL,
         "regenerate_webhook_id",
         "turn_fan_on",

@@ -218,6 +218,46 @@ SENSOR_TYPES = {
         entity_category=EntityCategory.DIAGNOSTIC,
         icon="mdi:clock-end",
     ),
+    "feeder_open_time_1": SensorEntityDescription(
+        key="feeder_open_time_1",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-start",
+    ),
+    "feeder_close_time_1": SensorEntityDescription(
+        key="feeder_close_time_1",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-end",
+    ),
+    "feeder_open_time_2": SensorEntityDescription(
+        key="feeder_open_time_2",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-start",
+    ),
+    "feeder_close_time_2": SensorEntityDescription(
+        key="feeder_close_time_2",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-end",
+    ),
+    "feeder_open_time_3": SensorEntityDescription(
+        key="feeder_open_time_3",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-start",
+    ),
+    "feeder_close_time_3": SensorEntityDescription(
+        key="feeder_close_time_3",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-end",
+    ),
+    "feeder_open_time_4": SensorEntityDescription(
+        key="feeder_open_time_4",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-start",
+    ),
+    "feeder_close_time_4": SensorEntityDescription(
+        key="feeder_close_time_4",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        icon="mdi:clock-end",
+    ),
     "overnight_sleep_start": SensorEntityDescription(
         key="overnight_sleep_start",
         entity_category=EntityCategory.DIAGNOSTIC,
@@ -394,6 +434,12 @@ def extract_sensor_value(sensor_key, device_data):
         return config.get("door", {}).get("openTime")
     if sensor_key == "door_close_time":
         return config.get("door", {}).get("closeTime")
+
+    # Feeder schedule slots (openTime1-4 / closeTime1-4)
+    if sensor_key.startswith("feeder_open_time_"):
+        return config.get("feeder", {}).get(f"openTime{sensor_key[-1]}")
+    if sensor_key.startswith("feeder_close_time_"):
+        return config.get("feeder", {}).get(f"closeTime{sensor_key[-1]}")
 
     # Handle overnight sleep times
     if sensor_key == "overnight_sleep_start":

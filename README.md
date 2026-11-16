@@ -89,6 +89,14 @@ The Smart No Waste Chicken Feeder exposes:
 - Open/close control (cover entity)
 - Feed level, light level, fault/state, and mode sensors
 - Last open/close timestamps
+- Door open and close configuration (`omlet_smart_coop.update_feeder_schedule` action; applies at the next feeder check-in)
+- Open/close time diagnostics for each schedule slot (1-4), grouped by slot
+
+## **Smart Feeder Screenshots**
+
+| Device (slot diagnostics) | Update Feeder Schedule action |
+|---|---|
+| ![](docs/feeder-device.png) | ![](docs/feeder-action.png) |
 
 ---
 

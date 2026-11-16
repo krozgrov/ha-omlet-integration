@@ -137,6 +137,62 @@ update_door_schedule:
           min: 0
           max: 60
 
+update_feeder_schedule:
+  name: Update Feeder Schedule
+  description: Update the Smart Feeder open/close schedule. Only provided fields are changed. The feeder applies changes at its next check-in.
+  target:
+    entity:
+      domain: cover
+  fields:
+    feeder_mode:
+      name: Feeder Mode
+      description: Mode for feeder operation (light, time, or manual). Leave empty to keep the current mode.
+      required: false
+      selector:
+        select:
+          options:
+            - "light"
+            - "time"
+            - "manual"
+    time_slot:
+      name: Time Slot
+      description: (Time mode) Slot number to update (1-4)
+      required: false
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 4
+          step: 1
+    open_time:
+      name: Open Time
+      description: Time to open the feeder (HH:MM) for the selected slot
+      required: false
+      selector:
+        time: {}
+    close_time:
+      name: Close Time
+      description: Time to close the feeder (HH:MM) for the selected slot
+      required: false
+      selector:
+        time: {}
+    open_light_level:
+      name: Open Light Level
+      description: Light level to open the feeder (light mode)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 99
+    close_light_level:
+      name: Close Light Level
+      description: Light level to close the feeder (light mode)
+      required: false
+      selector:
+        number:
+          min: 1
+          max: 99
+
 # Utility Services
 show_webhook_url:
   name: Show Webhook URL
