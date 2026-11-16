@@ -16,6 +16,17 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.11.16b1 – Smart Feeder schedule testing
+
+- Add the `omlet_smart_coop.update_feeder_schedule` action for mode, schedule slots 1–4, and light thresholds.
+- Add eight diagnostic sensors for feeder slot open/close times.
+- Validate every supplied setting before changing any device, and report failed updates to calling automations.
+- Feeder configuration changes apply at the next device check-in.
+
+Thanks to [@king-jam](https://github.com/king-jam) for [PR #22](https://github.com/krozgrov/ha-omlet-integration/pull/22) and testing with real hardware.
+
+---
+
 ## 2026.08.02 – Long-term sensor statistics
 
 - **Fixed**: Enable long-term statistics for battery level so future battery history remains available after Home Assistant purges detailed recorder history.
