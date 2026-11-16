@@ -211,6 +211,30 @@
       },
       "overnight_sleep_end": {
         "name": "Overnight Sleep End"
+      },
+      "feeder_open_time_1": {
+        "name": "Feeder Slot 1 Open Time"
+      },
+      "feeder_close_time_1": {
+        "name": "Feeder Slot 1 Close Time"
+      },
+      "feeder_open_time_2": {
+        "name": "Feeder Slot 2 Open Time"
+      },
+      "feeder_close_time_2": {
+        "name": "Feeder Slot 2 Close Time"
+      },
+      "feeder_open_time_3": {
+        "name": "Feeder Slot 3 Open Time"
+      },
+      "feeder_close_time_3": {
+        "name": "Feeder Slot 3 Close Time"
+      },
+      "feeder_open_time_4": {
+        "name": "Feeder Slot 4 Open Time"
+      },
+      "feeder_close_time_4": {
+        "name": "Feeder Slot 4 Close Time"
       }
     },
     "time": {
