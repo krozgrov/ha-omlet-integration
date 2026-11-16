@@ -6,13 +6,14 @@ import logging
 import inspect
 from typing import Any
 from aiohttp import ClientError
+import voluptuous as vol
 
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.const import UnitOfTemperature
 from homeassistant.components import persistent_notification as pn
 from homeassistant.helpers.device_registry import async_get as async_get_device_registry
-from homeassistant.exceptions import ServiceValidationError
-from homeassistant.helpers import entity_registry as er
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import config_validation as cv, entity_registry as er
 from homeassistant.helpers.service import async_extract_entity_ids
 from homeassistant.util.unit_conversion import TemperatureConverter
 
@@ -79,6 +80,53 @@ def _fmt_time_hhmm(value: Any) -> str | None:
         return value.strftime("%H:%M")
     except Exception:
         return None
+
+
+def _feeder_schedule_patch(data: dict[str, Any]) -> dict[str, Any]:
+    """Validate all supplied feeder settings before changing any device."""
+    def integer_in_range(field: str, minimum: int, maximum: int) -> int:
+        value = data.get(field, 1)
+        try:
+            number = int(value)
+            if isinstance(value, bool) or float(value) != number:
+                raise ValueError
+        except (TypeError, ValueError, OverflowError) as err:
+            raise ServiceValidationError(
+                f"{field} must be an integer between {minimum} and {maximum}"
+            ) from err
+        if not minimum <= number <= maximum:
+            raise ServiceValidationError(
+                f"{field} must be between {minimum} and {maximum}"
+            )
+        return number
+
+    slot = integer_in_range(ATTR_TIME_SLOT, 1, 4)
+    patch: dict[str, Any] = {}
+    if ATTR_FEEDER_MODE in data:
+        mode = data[ATTR_FEEDER_MODE]
+        if mode not in VALID_DOOR_MODES:
+            raise ServiceValidationError(
+                f"Invalid feeder mode '{mode}'. Valid: {', '.join(VALID_DOOR_MODES)}"
+            )
+        patch["mode"] = mode
+    for attr, key in (
+        (ATTR_OPEN_TIME, f"openTime{slot}"),
+        (ATTR_CLOSE_TIME, f"closeTime{slot}"),
+    ):
+        if attr in data:
+            try:
+                patch[key] = cv.time(data[attr]).strftime("%H:%M")
+            except vol.Invalid as err:
+                raise ServiceValidationError(f"Invalid {attr}: {data[attr]}") from err
+    for attr, key in (
+        (ATTR_OPEN_LIGHT_LEVEL, "openLightLevel"),
+        (ATTR_CLOSE_LIGHT_LEVEL, "closeLightLevel"),
+    ):
+        if attr in data:
+            patch[key] = integer_in_range(attr, 1, 99)
+    if not patch:
+        raise ServiceValidationError("Nothing to update")
+    return patch
 
 
 def _iter_coordinators(hass: HomeAssistant) -> list[OmletDataCoordinator]:
@@ -720,59 +768,38 @@ async def async_register_services(
             _LOGGER.error("Failed to update door schedule: %s", err)
 
     async def handle_update_feeder_schedule(call: ServiceCall) -> None:
-        """Handle updating the feeder open/close schedule."""
-        try:
-            targets = await _targets(call)
-            if not targets:
-                return
+        """Update every target and report any failures to the caller."""
+        feeder_patch = _feeder_schedule_patch(call.data)
+        targets = await _targets(call)
+        if not targets:
+            return
 
-            mode = call.data.get(ATTR_FEEDER_MODE)
-            if mode is not None and mode not in VALID_DOOR_MODES:
-                raise ServiceValidationError(
-                    f"Invalid feeder mode '{mode}'. Valid: {', '.join(VALID_DOOR_MODES)}"
-                )
-            slot = int(call.data.get(ATTR_TIME_SLOT, 1))
-            if not 1 <= slot <= 4:
-                raise ServiceValidationError("time_slot must be between 1 and 4")
-
-            # Partial PATCH: only send the keys the caller provided.
-            feeder_patch: dict[str, Any] = {}
-            if mode is not None:
-                feeder_patch["mode"] = mode
-            for attr, key in ((ATTR_OPEN_TIME, f"openTime{slot}"), (ATTR_CLOSE_TIME, f"closeTime{slot}")):
-                if (val := _fmt_time_hhmm(call.data.get(attr))) is not None:
-                    feeder_patch[key] = val
-            for attr, key in (
-                (ATTR_OPEN_LIGHT_LEVEL, "openLightLevel"),
-                (ATTR_CLOSE_LIGHT_LEVEL, "closeLightLevel"),
-            ):
-                if call.data.get(attr) is not None:
-                    feeder_patch[key] = int(call.data[attr])
-            if not feeder_patch:
-                raise ServiceValidationError("Nothing to update")
-
-            for coord, integration_device_ids in targets:
-                for device_id in integration_device_ids:
-                    try:
-                        await coord.api_client.patch_device_configuration(
-                            device_id, {"feeder": feeder_patch}
-                        )
-                        _LOGGER.info(
-                            "Updated feeder schedule for %s: %s",
-                            coord.devices[device_id]["name"],
-                            feeder_patch,
-                        )
-                    except Exception as err:
-                        _LOGGER.error(
-                            "Failed to update feeder schedule for device %s: %s",
-                            device_id,
-                            err,
-                        )
+        failures: list[str] = []
+        first_error: Exception | None = None
+        for coord, integration_device_ids in targets:
+            for device_id in integration_device_ids:
+                try:
+                    await coord.api_client.patch_device_configuration(
+                        device_id, {"feeder": feeder_patch}
+                    )
+                    _LOGGER.info(
+                        "Updated feeder schedule for %s: %s", device_id, feeder_patch
+                    )
+                except Exception as err:
+                    failures.append(f"device {device_id}: {err}")
+                    if first_error is None:
+                        first_error = err
+            try:
                 await coord.async_request_refresh()
-        except ServiceValidationError:
-            raise
-        except Exception as err:
-            _LOGGER.error("Failed to update feeder schedule: %s", err)
+            except Exception as err:
+                failures.append(f"refresh for {', '.join(integration_device_ids)}: {err}")
+                if first_error is None:
+                    first_error = err
+
+        if failures:
+            raise HomeAssistantError(
+                "Failed to update feeder schedule: " + "; ".join(failures)
+            ) from first_error
 
     async def handle_set_fan_mode(call: ServiceCall) -> None:
         """Set fan mode (manual/time/thermostatic) and optionally apply mode-specific settings."""
