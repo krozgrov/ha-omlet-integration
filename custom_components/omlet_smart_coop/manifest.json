@@ -8,5 +8,5 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/krozgrov/ha-omlet-integration/issues",
   "requirements": [],
-  "version": "2026.11.16b1"
+  "version": "2026.11.16b2"
 }

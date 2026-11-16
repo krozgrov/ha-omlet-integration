@@ -16,6 +16,13 @@ If you find this integration useful, consider supporting development:
 
 ---
 
+## 2026.11.16b2 – Workflow security fixes
+
+- Restrict HACS, Hassfest, Ruff, and Prettier workflow tokens to read-only repository contents.
+- Includes the Smart Feeder schedule support from `2026.11.16b1`.
+
+---
+
 ## 2026.11.16b1 – Smart Feeder schedule testing
 
 - Add the `omlet_smart_coop.update_feeder_schedule` action for mode, schedule slots 1–4, and light thresholds.
