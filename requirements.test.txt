@@ -1,0 +1,3 @@
+# Pins pytest-homeassistant-custom-component to the Home Assistant test harness.
+# Transitive deps include pytest, homeassistant, numpy, etc.
+pytest-homeassistant-custom-component==0.13.324
